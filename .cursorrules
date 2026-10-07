@@ -1,9 +1,0 @@
-## Repository rules
-
-- Follow `AGENTS.md` and the relevant documents in `docs/`.
-- Preserve the established HRM green, white, soft-gray, and slate design system.
-- Inspect existing feature components, hooks, schemas, and services before adding replacements.
-- Keep business state and mock data typed and feature-local; do not invent backend calls.
-- Preserve validation, authorization, keyboard access, and responsive behavior.
-- Run lint, typecheck, tests, Storybook build, and production build after implementation.
-- Do not commit secrets or store sensitive authentication data in local storage.
