@@ -1,7 +1,12 @@
-import { departmentDistribution, departmentTotal } from '../data/dashboardData'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
+import { navigateTo } from '@/app/router/navigation'
 
 export default function DepartmentDistribution() {
-  const max = Math.max(...departmentDistribution.map((department) => department.count))
+  const employees = useEmployees()
+  const activeEmployees = employees.filter((employee) => employee.status.toLowerCase() !== 'inactive')
+  const departmentDistribution = [...new Set(activeEmployees.map((employee) => employee.dept))].map((name) => ({ name, count: activeEmployees.filter((employee) => employee.dept === name).length }))
+  const departmentTotal = activeEmployees.length
+  const max = Math.max(1, ...departmentDistribution.map((department) => department.count))
 
   return (
     <section className="card department-distribution-card">
@@ -12,14 +17,15 @@ export default function DepartmentDistribution() {
 
       <div className="department-list">
         {departmentDistribution.map((department) => (
-          <div className="department-row" key={department.name}>
+          <button className="department-row department-row--clickable" key={department.name} onClick={() => navigateTo(`/app/employees?department=${encodeURIComponent(department.name)}`)}>
             <span className="department-name">{department.name}</span>
             <div className="department-track" role="progressbar" aria-label={`${department.name} employees`} aria-valuemin={0} aria-valuemax={max} aria-valuenow={department.count}>
               <span style={{ width: `${(department.count / max) * 100}%` }} />
             </div>
             <strong className="department-count">{department.count}</strong>
-          </div>
+          </button>
         ))}
+        {!departmentDistribution.length && <p className="empty-state">No department data is available.</p>}
       </div>
     </section>
   )

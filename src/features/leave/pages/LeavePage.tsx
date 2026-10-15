@@ -1,42 +1,22 @@
-import { useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
-import LeaveAnalytics from '../components/LeaveAnalytics'
-import LeaveFilters, { type LeaveFilter } from '../components/LeaveFilters'
 import LeaveHeader from '../components/LeaveHeader'
-import LeaveRequestTable from '../components/LeaveRequestTable'
 import LeaveStats from '../components/LeaveStats'
-import UpcomingTimeOff from '../components/UpcomingTimeOff'
-import { leaveService } from '../services/leave.service'
-import type { LeaveApplication, LeaveStatus } from '../types/leave.types'
+import { useLeaveApplications } from '../hooks/useLeaveApplications'
+import { getEmployeeLeaveBalances } from '../data/employeeLeaveBalances'
+import { useHRMDataChange } from '@/hooks/useHRMDataChange'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
 
 export function LeavePage() {
-  const [rows, setRows] = useState<LeaveApplication[]>(() => leaveService.list())
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<LeaveFilter>('All')
-  const [leaveType, setLeaveType] = useState('All')
-  const counts: Record<LeaveFilter, number> = {
+  useHRMDataChange()
+  const rows = useLeaveApplications()
+  const employees = useEmployees()
+  const balances = employees.flatMap((employee) => getEmployeeLeaveBalances(employee.id, rows, employee.email, employee.phone))
+  const counts = {
     All: rows.length,
     Pending: rows.filter((row) => row.status === 'Pending').length,
     Approved: rows.filter((row) => row.status === 'Approved').length,
     Rejected: rows.filter((row) => row.status === 'Rejected').length,
-  }
-  const breakdown: { status: LeaveStatus; count: number }[] = [
-    { status: 'Approved', count: counts.Approved },
-    { status: 'Pending', count: counts.Pending },
-    { status: 'Rejected', count: counts.Rejected },
-  ]
-  const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    return rows.filter((row) => (
-      `${row.employeeName} ${row.employeeEmail} ${row.id} ${row.leaveType} ${row.reason}`.toLowerCase().includes(normalizedQuery)
-    ) && (filter === 'All' || row.status === filter) && (leaveType === 'All' || row.leaveType === leaveType))
-  }, [rows, query, filter, leaveType])
-
-  const changeStatus = (row: LeaveApplication, status: 'Approved' | 'Rejected') => {
-    leaveService.updateStatus(row.id, status)
-    setRows(leaveService.list())
-    toast.success(`Leave request ${status.toLowerCase()}.`)
+    Cancelled: rows.filter((row) => row.status === 'Cancelled').length,
   }
 
   return (
@@ -44,20 +24,45 @@ export function LeavePage() {
       <main className="leave-page">
         <LeaveHeader pending={counts.Pending} />
         <LeaveStats total={counts.All} pending={counts.Pending} approved={counts.Approved} rejected={counts.Rejected} />
-        <div className="leave-content-grid">
-          <section className="leave-requests-panel" aria-labelledby="leave-requests-title">
+        <section className="panel leave-balance-panel">
           <div className="leave-requests-heading">
-            <div><span className="leave-widget-kicker">REQUEST MANAGEMENT</span><h2 id="leave-requests-title">Leave requests</h2><p>Review and manage time off across your organization.</p></div>
-            <span className="leave-result-count">{filtered.length} shown</span>
+            <div>
+              <span className="leave-widget-kicker">SHARED LEAVE DATA</span>
+              <h2>Leave balances</h2>
+              <p>Approved requests update usage for the matching employee and leave type.</p>
+            </div>
           </div>
-          <LeaveFilters query={query} filter={filter} leaveType={leaveType} counts={counts} onQueryChange={setQuery} onFilterChange={setFilter} onLeaveTypeChange={setLeaveType} />
-          <LeaveRequestTable rows={filtered} onStatusChange={changeStatus} />
-          </section>
-          <aside className="leave-insights-rail" aria-label="Leave insights">
-            <LeaveAnalytics breakdown={breakdown} total={counts.All} />
-            <UpcomingTimeOff rows={rows} />
-          </aside>
-        </div>
+          <div className="table-scroll">
+            <table className="hr-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Leave type</th>
+                  <th>Annual quota</th>
+                  <th>Used</th>
+                  <th>Remaining</th>
+                  <th>Paid / unpaid</th>
+                  <th>Carry forward</th>
+                  <th>Accrued</th>
+                </tr>
+              </thead>
+              <tbody>
+                {balances.map((balance) => (
+                  <tr key={`${balance.employeeId}-${balance.leaveType}`}>
+                    <td>{balance.employee}<small>{balance.employeeId}</small></td>
+                    <td>{balance.leaveType}</td>
+                    <td>{balance.annualQuota} days</td>
+                    <td>{balance.used} days</td>
+                    <td>{Math.max(0, balance.annualQuota + balance.carryForward - balance.used)} days</td>
+                    <td>{balance.paid ? 'Paid' : 'Unpaid'}</td>
+                    <td>{balance.carryForward} days</td>
+                    <td>{balance.accrued} days</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </PageContainer>
   )

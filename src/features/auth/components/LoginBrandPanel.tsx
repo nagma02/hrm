@@ -3,6 +3,7 @@ import { Activity, CalendarCheck2, CircleCheck, UsersRound, WalletCards } from '
 const features = [
   { label: 'Employee management', Icon: UsersRound },
   { label: 'Attendance & leave', Icon: CalendarCheck2 },
+  { label: 'Payments & reimbursements', Icon: WalletCards },
   { label: 'Payroll management', Icon: WalletCards },
   { label: 'Workforce insights', Icon: Activity },
 ]
@@ -13,11 +14,6 @@ export function LoginBrandPanel() {
       <div className="login-brand-glow login-brand-glow--one" />
       <div className="login-brand-glow login-brand-glow--two" />
       <div className="login-brand-content">
-        <div className="login-brand-logo">
-          <span className="login-brand-mark">H</span>
-          <span>HRM<small>Human Resource Management</small></span>
-        </div>
-
         <div className="login-brand-copy">
           <span className="login-brand-kicker"><CircleCheck size={14} /> People operations, made clear</span>
           <h1>Manage your workforce with confidence.</h1>

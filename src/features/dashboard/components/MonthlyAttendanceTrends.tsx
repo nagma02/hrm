@@ -1,7 +1,24 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { monthlyAttendanceTrends } from '../data/dashboardData'
+import { attendanceDateKey, listAttendanceRows } from '@/features/attendance/services/attendance.service'
+import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 
 export default function MonthlyAttendanceTrends() {
+  useHRMDataChange()
+  const rows = listAttendanceRows()
+  const now = new Date()
+  const monthlyAttendanceTrends = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
+    const data = rows.filter((row) => {
+      const recordedAt = new Date(`${attendanceDateKey(row)}T12:00:00`)
+      return recordedAt.getFullYear() === date.getFullYear() && recordedAt.getMonth() === date.getMonth()
+    })
+    return {
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      present: data.filter((row) => row.status === 'Present' || row.status === 'Half Day').length,
+      absent: data.filter((row) => row.status === 'Absent').length,
+      late: data.filter((row) => row.status === 'Late').length,
+    }
+  })
   return <section className="card dashboard-visual-card" aria-labelledby="monthly-attendance-title">
     <div className="chart-heading"><div><span className="eyebrow">SIX MONTHS</span><h3 className="section-title" id="monthly-attendance-title">Monthly attendance trends</h3><p>Present, absent, and late records</p></div></div>
     <div className="monthly-attendance-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyAttendanceTrends} margin={{ top: 10, right: 4, left: -20, bottom: 0 }}>
@@ -9,6 +26,6 @@ export default function MonthlyAttendanceTrends() {
       <Bar dataKey="present" stackId="attendance" fill="#10B981" radius={[0, 0, 0, 0]}/><Bar dataKey="absent" stackId="attendance" fill="#F59E0B"/><Bar dataKey="late" stackId="attendance" fill="#94A3B8" radius={[4, 4, 0, 0]}/>
     </BarChart></ResponsiveContainer></div>
     <div className="dashboard-chart-legend"><span><i style={{background:'#10B981'}}/>Present</span><span><i style={{background:'#F59E0B'}}/>Absent</span><span><i style={{background:'#94A3B8'}}/>Late</span></div>
-    <small className="dashboard-data-note">Monthly comparison values are illustrative demo trends.</small>
+    {!rows.length && <small className="dashboard-data-note">No attendance records are available for this period.</small>}
   </section>
 }

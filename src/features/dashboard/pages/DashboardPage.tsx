@@ -6,6 +6,7 @@ import RecentEmployeesTable from '@/features/dashboard/components/RecentEmployee
 import UpcomingEvents from '@/features/dashboard/components/UpcomingEvents'
 import HRInsights from '@/features/dashboard/components/HRInsights'
 import RecentActivity from '@/features/dashboard/components/RecentActivity'
+import PayrollSummary from '@/features/dashboard/components/PayrollSummary'
 import { navigateTo } from '@/app/router/navigation'
 import { Plus, RotateCw, Search } from 'lucide-react'
 import { useAuth } from '@/app/providers/use-auth'
@@ -18,11 +19,12 @@ const DepartmentGoalGauge = lazy(() => import('@/features/dashboard/components/D
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
   return (
     <div className="dashboard-page">
       <div className="page-header dashboard-header">
         <div>
-          <p className="eyebrow">MONDAY, OCTOBER 5, 2026</p>
+          <p className="eyebrow">{todayLabel.toUpperCase()}</p>
           <h2 className="section-title app-page-title">Welcome back, {user?.name ?? 'there'}</h2>
           <div style={{ color: 'var(--color-muted)', marginTop: 6 }}>Dashboard overview and today's HR summary</div>
         </div>
@@ -52,16 +54,16 @@ export default function DashboardPage() {
       </div>
 
       <div className="dashboard-pair dashboard-pair-wide">
-        <RecentEmployeesTable />
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div style={{ display: 'grid', alignContent: 'start', gap: 14 }}>
+          <RecentEmployeesTable />
+          <RecentActivity />
+          <Suspense fallback={<section className="card chart-loading">Loading goal progress…</section>}><DepartmentGoalGauge /></Suspense>
+        </div>
+        <div style={{ display: 'grid', alignContent: 'start', gap: 16 }}>
           <UpcomingEvents />
+          <PayrollSummary />
           <HRInsights />
         </div>
-      </div>
-
-      <div className="dashboard-activity-goal">
-        <RecentActivity />
-        <Suspense fallback={<section className="card chart-loading">Loading goal progress…</section>}><DepartmentGoalGauge /></Suspense>
       </div>
     </div>
   )

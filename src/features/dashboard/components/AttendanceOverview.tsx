@@ -10,10 +10,38 @@ import {
   YAxis,
 } from 'recharts'
 import ChartTooltip from './ChartTooltip'
-import { attendanceSummary, attendanceWeekly } from '../data/dashboardData'
+import { attendanceDateKey, listAttendanceRows } from '@/features/attendance/services/attendance.service'
+import { leaveService } from '@/features/leave/services/leave.service'
+import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 
 export default function AttendanceOverview() {
+  useHRMDataChange()
   const [chartWidth, setChartWidth] = useState(0)
+  const records = listAttendanceRows()
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayLeaves = leaveService.list().filter((leave) => leave.status === 'Approved' && leave.startDate <= todayKey && leave.endDate >= todayKey).length
+  const attendanceSummary = [
+    { key: 'present', label: 'Present Today', value: records.filter((row) => attendanceDateKey(row) === todayKey && ['Present', 'Late', 'Half Day'].includes(row.status)).length },
+    { key: 'absent', label: 'Absent Today', value: records.filter((row) => attendanceDateKey(row) === todayKey && row.status === 'Absent').length },
+    { key: 'on-leave', label: 'On Leave', value: todayLeaves },
+    { key: 'late', label: 'Late', value: records.filter((row) => attendanceDateKey(row) === todayKey && row.status === 'Late').length },
+  ]
+  const attendanceWeekly = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - (6 - index))
+    const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const dayRecords = records.filter((row) => attendanceDateKey(row) === dayKey)
+    return {
+      day: date.toLocaleDateString('en-US', { weekday: 'long' }),
+      present: dayRecords.filter((row) => row.status === 'Present' || row.status === 'Half Day').length,
+      absent: dayRecords.filter((row) => row.status === 'Absent').length,
+      late: dayRecords.filter((row) => row.status === 'Late').length,
+    }
+  })
+  const maxAttendance = Math.max(1, ...attendanceWeekly.flatMap((item) => [item.present, item.absent, item.late]))
+  const weekStart = new Date(today)
+  weekStart.setDate(today.getDate() - 6)
   return (
     <section className="card attendance-chart-card">
       <div className="chart-heading">
@@ -22,7 +50,7 @@ export default function AttendanceOverview() {
           <h3 className="section-title">Weekly attendance</h3>
           <p>Present, absent, and late check-ins this week</p>
         </div>
-        <span className="chart-period">Oct 5 – Oct 11, 2026</span>
+        <span className="chart-period">{weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
       </div>
       <div className="attendance-summary" aria-label="Today's attendance summary">
         {attendanceSummary.map((item) => <div className={`attendance-summary-item attendance-summary-item--${item.key}`} key={item.key}><span>{item.label}</span><strong>{item.value}</strong></div>)}
@@ -32,8 +60,8 @@ export default function AttendanceOverview() {
           <ComposedChart data={attendanceWeekly} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
             <CartesianGrid stroke="#e9efeb" strokeDasharray="4 5" vertical={false} />
             <XAxis dataKey="day" tickFormatter={(day: string) => chartWidth < 520 ? day.slice(0, 3) : day} interval={chartWidth < 520 ? 'preserveStartEnd' : 0} axisLine={false} tickLine={false} tick={{ fill: '#7f8b83', fontSize: chartWidth < 520 ? 9 : 10 }} dy={9} />
-            <YAxis yAxisId="employees" domain={[0, 220]} ticks={[0, 55, 110, 165, 220]} axisLine={false} tickLine={false} tick={{ fill: '#68756c', fontSize: 12 }} />
-            <YAxis yAxisId="events" orientation="right" domain={[0, 25]} hide />
+            <YAxis yAxisId="employees" domain={[0, maxAttendance]} axisLine={false} tickLine={false} tick={{ fill: '#68756c', fontSize: 12 }} />
+            <YAxis yAxisId="events" orientation="right" domain={[0, maxAttendance]} hide />
             <Tooltip content={ChartTooltip} cursor={{ stroke: '#d8e4dc', strokeDasharray: '4 4' }} animationDuration={180} />
             <Legend verticalAlign="top" align="right" height={32} iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: '#6e7a72', paddingBottom: 5 }} />
             <Line yAxisId="employees" type="monotone" dataKey="present" name="Present" stroke="#0b7168" strokeWidth={2.7} dot={{ r: 3.5, fill: '#0b7168', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: '#0b7168', stroke: '#fff', strokeWidth: 2 }} />

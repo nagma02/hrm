@@ -1,94 +1,53 @@
-import React from 'react'
+import { useState } from 'react'
+import { Download } from 'lucide-react'
+import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
 import StatusBadge from '@/features/shared/StatusBadge'
 import { useLocation } from '@/hooks/use-location'
-import { employees } from '../data/employeesData'
+import { employeeStore } from '../data/employeeStore'
 import { navigateTo } from '@/app/router/navigation'
-import { toast } from 'sonner'
+import { payrollService } from '@/features/payroll/services/payroll.service'
+import { deductionTotal, earningTotal, netSalary } from '@/features/payroll/data/payrollData'
+import { leaveService } from '@/features/leave/services/leave.service'
+import { getEmployeeLeaveBalances } from '@/features/leave/data/employeeLeaveBalances'
+import { useEmployees } from '../hooks/useEmployees'
+import { listAttendanceRows } from '@/features/attendance/services/attendance.service'
 
 export default function EmployeeDetailsPage() {
   const path = useLocation()
   const id = path.split('/')[3]
-  let employeeList
-  try { employeeList = JSON.parse(localStorage.getItem('hrm-employees') || 'null') || employees } catch { employeeList = employees }
-  const found = employeeList.find((e: { id: string }) => e.id === id) || employeeList[0]
-  const mock = {
-    id: found.id,
-    name: `${found.firstName} ${found.lastName}`,
-    title: found.title,
-    dept: found.dept,
-    email: found.email,
-    phone: found.phone,
-    joinDate: found.joinDate,
-    manager: 'Carlos Reyes',
+  const employees = useEmployees()
+  const employee = employees.find((item) => item.id === id)
+  const [documentPreview, setDocumentPreview] = useState<string | null>(null)
+  if (!employee) return <PageContainer><PageHeader title="Employee not found" subtitle="This employee may have been removed." actions={<button className="button" onClick={() => navigateTo('/app/employees')}>Back to employees</button>} /></PageContainer>
+
+  const name = `${employee.firstName} ${employee.lastName}`
+  const now = new Date()
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const attendance = listAttendanceRows().find((record) => record.employeeId === employee.id && record.dateKey === todayKey)
+  const leaves = leaveService.list().filter((record) => record.employeeId === employee.id || record.employeeEmail.toLowerCase() === employee.email.toLowerCase())
+  const balances = getEmployeeLeaveBalances(employee.id, leaves, employee.email, employee.phone)
+  const payroll = payrollService.list().filter((record) => record.employeeId === employee.id).sort((a,b)=>b.period.localeCompare(a.period))[0]
+  const documents = ['Offer Letter', 'Joining Letter', 'ID Proof', 'Address Proof', 'Experience Letter', 'Salary Slip', 'Other HR Document']
+  const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+  const downloadDocument = (label: string) => {
+    const content = `${label}\nEmployee: ${name}\nEmployee ID: ${employee.id}\n\nDemo document. No file storage is connected.`
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/plain' }))
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${employee.id}-${label.toLowerCase().replaceAll(' ', '-')}.txt`; anchor.click(); URL.revokeObjectURL(url)
   }
-
-  return (
-    <PageContainer>
-      <PageHeader title="Employee Details" subtitle={`${mock.name} — ${mock.title}`} actions={<div style={{ display: 'flex', gap: 8 }}><button className="button" onClick={() => navigateTo(`/app/employees/${mock.id}/edit`)}>Edit</button><button className="button" onClick={() => {if(window.confirm(`Delete ${mock.name}?`)){localStorage.setItem('hrm-employees',JSON.stringify(employeeList.filter((e:{id:string})=>e.id!==mock.id)));toast.success('Employee deleted successfully');navigateTo('/app/employees')}}}>Delete</button></div>} />
-
-      <div className="employee-details-grid" style={{ display: 'grid', gap: 16 }}>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div className="card">
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <div style={{ width: 72, height: 72, borderRadius: 12, background: 'rgba(17,24,39,0.04)', display: 'grid', placeItems: 'center', fontWeight: 800 }}>JC</div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 19 }}>{mock.name}</div>
-                <div style={{ color: 'var(--color-muted)' }}>{mock.title} — {mock.dept}</div>
-                <div style={{ marginTop: 8 }}><StatusBadge status="Active" /></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="section-title">Overview</h3>
-            <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-              <div className="employee-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Email</div><div>{mock.email}</div></div>
-              <div className="employee-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Phone</div><div>{mock.phone}</div></div>
-              <div className="employee-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Manager</div><div>{mock.manager}</div></div>
-              <div className="employee-detail-row" style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Join Date</div><div>{mock.joinDate}</div></div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="section-title">Attendance</h3>
-            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: 'var(--color-muted)' }}>Present</div>
-                <div style={{ fontWeight: 800, fontSize: 21 }}>198</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: 'var(--color-muted)' }}>Absent</div>
-                <div style={{ fontWeight: 800, fontSize: 21 }}>12</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: 'var(--color-muted)' }}>Late</div>
-                <div style={{ fontWeight: 800, fontSize: 21 }}>5</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div className="card">
-            <h3 className="section-title">Leave</h3>
-            <div style={{ marginTop: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Total Leave</div><div style={{ fontWeight: 800 }}>18</div></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Used</div><div style={{ fontWeight: 800 }}>6</div></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: 'var(--color-muted)' }}>Remaining</div><div style={{ fontWeight: 800 }}>12</div></div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="section-title">Recent Activity</h3>
-            <div style={{ marginTop: 12 }}>
-              <div style={{ color: 'var(--color-muted)' }}>10:30 AM — Jane Cooper joined Engineering</div>
-              <div style={{ color: 'var(--color-muted)', marginTop: 8 }}>09:45 AM — Leave approved for John Doe</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </PageContainer>
-  )
+  return <PageContainer>
+    <PageHeader title="Employee Details" subtitle={`${name} — ${employee.title}`} actions={<div className="employee-page-actions"><button className="button" onClick={() => navigateTo('/app/employees')}>Back to employees</button><button className="button" onClick={() => navigateTo(`/app/employees/${employee.id}/edit`)}>Edit</button><button className="button" onClick={() => { const status = employee.status.toLowerCase() === 'inactive' ? 'Active' : 'Inactive'; if (window.confirm(`${status === 'Inactive' ? 'Deactivate' : 'Reactivate'} ${name}? HR history will be retained.`)) { employeeStore.save(employees.map((item) => item.id === employee.id ? { ...item, status } : item)); toast.success(`Employee ${status.toLowerCase()}.`) } }}>{employee.status.toLowerCase() === 'inactive' ? 'Reactivate' : 'Deactivate'}</button></div>} />
+    <div className="employee-details-grid"><div className="employee-content-stack">
+      <section className="card"><div className="employee-detail-identity"><span className="employee-detail-avatar">{employee.firstName[0]}{employee.lastName[0]}</span><div><h2>{name}</h2><p>{employee.title} · {employee.dept}</p><StatusBadge status={employee.status}/></div></div></section>
+      <section className="card"><h3 className="section-title">Personal & Contact Information</h3><div className="employee-detail-list">{[['Employee ID',employee.id],['Email',employee.email],['Phone',employee.phone],['Date of birth',employee.dateOfBirth ?? 'Not provided'],['Gender',employee.gender ?? 'Not provided'],['Address',employee.address ?? employee.location]].map(([label,value])=><div className="employee-detail-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></section>
+      <section className="card"><h3 className="section-title">Employment Information</h3><div className="employee-detail-list">{[['Department',employee.dept],['Designation',employee.title],['Manager',employee.manager ?? 'Not assigned'],['Joining date',employee.joinDate],['Employment type',employee.employmentType ?? 'Not configured'],['Location',employee.location],['Shift',employee.shift ?? 'Not assigned'],['Status',employee.status]].map(([label,value])=><div className="employee-detail-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></section>
+      <section className="card"><h3 className="section-title">Attendance Summary</h3><div className="employee-detail-list">{[['Today status',attendance?.status ?? 'No record'],['Check in',attendance?.detail.split('—')[0]?.trim() ?? '—'],['Check out',attendance?.detail.split('—')[1]?.trim() ?? '—']].map(([label,value])=><div className="employee-detail-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>{attendance&&<button className="button" onClick={()=>navigateTo(`/app/attendance/${attendance.id}`)}>View attendance details</button>}</section>
+      <section className="card"><h3 className="section-title">Leave Summary</h3><div className="table-scroll"><table className="hr-table"><thead><tr><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th>Details</th></tr></thead><tbody>{leaves.map((row)=><tr key={row.id}><td>{row.leaveType}</td><td>{row.startDate} – {row.endDate}</td><td>{row.numberOfDays}</td><td>{row.status}</td><td><button className="text-action" onClick={()=>navigateTo(`/app/leave/${row.id}`)}>View details</button></td></tr>)}</tbody></table>{!leaves.length&&<p className="empty-state">No leave requests recorded.</p>}</div><p>Remaining paid balance: {balances.reduce((sum,row)=>sum+Math.max(0,row.annualQuota+row.carryForward-row.used),0)} days</p></section>
+      <section className="card"><h3 className="section-title">Payroll Summary</h3>{payroll ? <><div className="employee-detail-list">{[['Period',payroll.period],['Basic salary',money(payroll.basic)],['Gross salary',money(earningTotal(payroll))],['Deductions',money(deductionTotal(payroll))],['Net salary',money(netSalary(payroll))],['Payment status',payroll.status]].map(([label,value])=><div className="employee-detail-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><button className="button" onClick={()=>navigateTo(`/app/payroll/${payroll.id}`)}>View payroll details</button></> : <p>No payroll record is configured.</p>}</section>
+      <section className="card"><h3 className="section-title">Documents</h3><div className="table-scroll"><table className="hr-table"><thead><tr><th>Document</th><th>Availability</th><th>Actions</th></tr></thead><tbody>{documents.map((item)=><tr key={item}><td>{item}</td><td>Demo metadata</td><td><button className="text-action" onClick={()=>setDocumentPreview(item)}>View</button> <button className="text-action" onClick={()=>downloadDocument(item)}><Download size={13}/> Download sample</button></td></tr>)}</tbody></table></div><p>Files are not uploaded or stored in this demo.</p></section>
+      <section className="card"><h3 className="section-title">Activity</h3><div className="employee-detail-list"><div className="employee-detail-row"><span>{employee.joinDate}</span><strong>{name} joined {employee.dept}</strong></div>{leaves.slice(0,3).map((row)=><div className="employee-detail-row" key={row.id}><span>{row.appliedDate}</span><button className="text-action" onClick={()=>navigateTo(`/app/leave/${row.id}`)}>{row.leaveType} request · {row.status}</button></div>)}</div></section>
+    </div></div>
+    {documentPreview&&<div className="modal-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&setDocumentPreview(null)}><section className="payslip-modal" role="dialog" aria-modal="true"><button className="modal-close" aria-label="Close document" onClick={()=>setDocumentPreview(null)}>×</button><p className="eyebrow">DEMO DOCUMENT PREVIEW</p><h2>{documentPreview}</h2><p>{name} · {employee.id}</p><p>This sample document is generated locally for preview. No employee file is stored.</p><div className="modal-actions"><button className="button" onClick={()=>setDocumentPreview(null)}>Close</button><button className="button primary" onClick={()=>downloadDocument(documentPreview)}>Download sample</button></div></section></div>}
+  </PageContainer>
 }

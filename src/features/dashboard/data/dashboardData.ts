@@ -73,37 +73,35 @@ export const employeeGrowth = [
   { month: 'October', employees: 248 },
 ]
 
-export const recentEmployees = [
-  { id: 'E-1001', name: 'Jane Cooper', dept: 'Engineering', title: 'Software Engineer', joinDate: '2026-10-01', status: 'Active' },
-  { id: 'E-1002', name: 'John Doe', dept: 'Design', title: 'Product Designer', joinDate: '2026-09-29', status: 'Active' },
-  { id: 'E-1003', name: 'Aisha Khan', dept: 'HR', title: 'HR Manager', joinDate: '2026-09-28', status: 'Active' },
-  { id: 'E-1004', name: 'Rahul Sharma', dept: 'Engineering', title: 'Frontend Developer', joinDate: '2026-09-25', status: 'Active' },
-  { id: 'E-1005', name: 'Priya Verma', dept: 'HR', title: 'HR Executive', joinDate: '2026-09-22', status: 'Active' },
-]
-
-export type UpcomingEvent = { date: string; dateLabel?: string; time?: string; type: string; person: string; category: 'Meeting' | 'People' | 'Performance' }
+export type UpcomingEvent = { date: string; dateLabel?: string; time?: string; type: string; person: string; category: 'Meeting' | 'People' | 'Performance' | 'Birthday' | 'Leave' | 'Holiday' | 'Payroll' }
 
 export const upcomingEvents: UpcomingEvent[] = [
-  { date: '2026-10-05', dateLabel: 'Today', time: '3:00 PM', type: 'Team Meeting', person: 'HR & department leads', category: 'Meeting' },
-  { date: '2026-10-06', dateLabel: 'Tomorrow', time: '10:00 AM', type: 'Employee Onboarding', person: 'New hire orientation', category: 'People' },
-  { date: '2026-10-08', type: 'Performance Review', person: 'Quarterly check-ins', category: 'Performance' },
+  { date: '2026-10-09', dateLabel: 'Tomorrow', time: '3:00 PM', type: 'HR team meeting', person: 'HR & department leads', category: 'Meeting' },
+  { date: '2026-10-10', time: '10:00 AM', type: 'Employee onboarding', person: 'New hire orientation', category: 'People' },
+  { date: '2026-10-12', type: 'Quarterly reviews', person: 'Performance review window opens', category: 'Performance' },
+  { date: '2026-10-14', type: 'Payroll processing', person: 'October payroll approval deadline', category: 'Payroll' },
+  { date: '2026-10-16', type: 'Team leave', person: '3 employees scheduled', category: 'Leave' },
+  { date: '2026-10-18', type: 'Company holiday', person: 'Regional calendar · demo', category: 'Holiday' },
+  { date: '2026-10-20', type: 'Employee birthday', person: 'People team celebration', category: 'Birthday' },
 ]
 
 export type HRInsight = {
   key: string
   label: string
   value: number
-  icon: 'employees' | 'leave' | 'positions' | 'attendance' | 'birthday'
+  icon: 'employees' | 'leave' | 'positions' | 'attendance' | 'birthday' | 'payroll' | 'probation'
   tone: 'green' | 'amber' | 'blue' | 'red'
 }
 
 export const hrInsights: HRInsight[] = [
   { key: 'new-employees', label: 'New Employees This Month', value: kpiStats.find((stat) => stat.key === 'new')?.value ?? 0, icon: 'employees', tone: 'green' },
   { key: 'pending-leave', label: 'Pending Leave Requests', value: leaveOverview.pending, icon: 'leave', tone: 'amber' },
-  { key: 'open-positions', label: 'Open Positions', value: kpiStats.find((stat) => stat.key === 'open')?.value ?? 0, icon: 'positions', tone: 'blue' },
   { key: 'on-leave', label: 'Employees Currently On Leave', value: attendanceToday.onLeave, icon: 'leave', tone: 'blue' },
   { key: 'attendance-issues', label: 'Attendance Issues', value: 3, icon: 'attendance', tone: 'red' },
   { key: 'upcoming-birthdays', label: 'Upcoming Birthdays This Week', value: 5, icon: 'birthday', tone: 'green' },
+  { key: 'pending-payroll', label: 'Payroll Records Pending', value: 3, icon: 'payroll', tone: 'amber' },
+  { key: 'payroll-processed', label: 'Payroll Records Paid', value: 1, icon: 'payroll', tone: 'green' },
+  { key: 'probation', label: 'Employees on Probation', value: 7, icon: 'probation', tone: 'blue' },
 ]
 
 export const recentActivity = [

@@ -7,6 +7,7 @@ const statusColors: Record<LeaveStatus, string> = {
   Approved: 'var(--leave-approved)',
   Pending: 'var(--leave-pending)',
   Rejected: 'var(--leave-rejected)',
+  Cancelled: 'var(--color-muted)',
 }
 
 export default function LeaveAnalytics({ breakdown, total }: { breakdown: StatusCount[]; total: number }) {

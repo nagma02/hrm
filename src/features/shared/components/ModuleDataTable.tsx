@@ -1,12 +1,12 @@
-import { Check, Eye, MoreHorizontal, Pencil, Power, Printer, Trash2, X } from 'lucide-react'
-import { departmentDistribution } from '@/features/dashboard/data/dashboardData'
+import { Check, Eye, Pencil, Power, Printer, Trash2, X } from 'lucide-react'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import {
   departmentManagers,
   designationCounts,
-  shiftAssignmentCounts,
   type ModuleRow,
 } from '../data/moduleData'
 import { navigateTo } from '@/app/router/navigation'
+import { payrollService } from '@/features/payroll/services/payroll.service'
 
 type Props = {
   module: string
@@ -66,16 +66,18 @@ export default function ModuleDataTable({
   onEdit,
   onToggleStatus,
 }: Props) {
+  const employees = useEmployees()
   const status = (value: string) =>
     module === 'payroll' && ['Processed', 'Approved'].includes(value) ? 'Paid' : value
-  const departmentCount = (name: string) =>
-    departmentDistribution.find(
-      (entry) => entry.name === name || (name === 'People & Culture' && entry.name === 'HR'),
-    )?.count ?? 0
+  const departmentCount = (name: string) => employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && (employee.dept === name || (name === 'People & Culture' && employee.dept === 'HR'))).length
   const countCell = (row: ModuleRow) =>
     module === 'departments'
       ? departmentCount(row.name)
-      : (designationCounts[row.id] ?? Number(row.detail.match(/(\d+) employees?/)?.[1] ?? 0))
+      : module === 'designations'
+        ? employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && employee.title === row.name).length
+        : module === 'shifts'
+          ? employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && employee.shift === row.name).length
+          : (designationCounts[row.id] ?? Number(row.detail.match(/(\d+) employees?/)?.[1] ?? 0))
   const actions = (row: ModuleRow) =>
     module === 'designations' ? (
       <div className="row-actions designation-row-actions">
@@ -110,6 +112,7 @@ export default function ModuleDataTable({
       </div>
     ) : ['shifts', 'departments'].includes(module) ? (
       <div className="row-actions">
+        {module === 'departments' && <button title="View department" aria-label={`View ${row.name}`} onClick={() => onView?.(row)}><Eye size={15}/></button>}
         <button
           title={`Edit ${module === 'shifts' ? 'shift' : 'department'}`}
           aria-label={`Edit ${row.name}`}
@@ -117,6 +120,11 @@ export default function ModuleDataTable({
         >
           <Pencil size={15} />
         </button>
+        <button
+          title={row.status === 'Active' ? 'Deactivate' : 'Activate'}
+          aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`}
+          onClick={() => onToggleStatus?.(row)}
+        ><Power size={15}/></button>
         <button
           title="Delete record"
           aria-label={`Delete ${row.name}`}
@@ -175,11 +183,11 @@ export default function ModuleDataTable({
           </>
         )}
         <button
-          title="More actions"
+          title="Delete record"
           aria-label={`Delete ${row.name}`}
           onClick={() => onAction(row, 'delete')}
         >
-          <MoreHorizontal size={16} />
+          <Trash2 size={16} />
         </button>
       </div>
     )
@@ -195,12 +203,16 @@ export default function ModuleDataTable({
             <th>Check-out</th>
             <th>Status</th>
             <th>Working hours</th>
+            <th>Location</th>
+            <th>Overtime</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => {
             const times = attendanceTimes(row.detail, row.status)
+            const employee = employees.find((item) => `${item.firstName} ${item.lastName}`.toLowerCase() === row.name.toLowerCase())
+            const payroll = payrollService.list().find((item) => item.employeeId === employee?.id)
             return (
               <tr key={row.id}>
                 <td>
@@ -218,6 +230,8 @@ export default function ModuleDataTable({
                   </span>
                 </td>
                 <td>{times.hours}</td>
+                <td>{employee?.location ?? '—'}</td>
+                <td>{payroll ? `${payroll.overtimeHours}h` : '—'}</td>
                 <td>{actions(row)}</td>
               </tr>
             )
@@ -248,7 +262,7 @@ export default function ModuleDataTable({
               </td>
               <td>{row.department}</td>
               <td>{row.detail}</td>
-              <td>{shiftAssignmentCounts[row.id] ?? 0}</td>
+              <td>{countCell(row)}</td>
               <td>
                 <span className={`status-pill status-${row.status.toLowerCase()}`}>
                   <i />
@@ -269,6 +283,8 @@ export default function ModuleDataTable({
           <tr>
             <th>Department</th>
             <th>Employees</th>
+            <th>Active employees</th>
+            <th>Open positions</th>
             <th>Manager</th>
             <th>Location</th>
             <th>Status</th>
@@ -283,6 +299,8 @@ export default function ModuleDataTable({
                 <small className="table-secondary-text">{row.id}</small>
               </td>
               <td>{departmentCount(row.name)}</td>
+              <td>{employees.filter((employee) => (employee.dept === row.name || (row.name === 'People & Culture' && employee.dept === 'HR')) && employee.status === 'Active').length}</td>
+              <td>—</td>
               <td>{departmentManagers[row.name] ?? row.department ?? 'Unassigned'}</td>
               <td>{row.detail}</td>
               <td>

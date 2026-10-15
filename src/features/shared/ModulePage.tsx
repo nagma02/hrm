@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowUpRight, ClipboardList, Download, Plus, Printer, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { navigateTo } from '@/app/router/navigation'
@@ -15,6 +15,12 @@ import { buildCsv } from '@/utils/csv'
 import LeaveBalanceRadials from '@/features/attendance/components/LeaveBalanceRadials'
 import AttendanceCalendar from '@/features/attendance/components/AttendanceCalendar'
 import AttendanceClockWidget from '@/features/attendance/components/AttendanceClockWidget'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
+import { employeeStore } from '@/features/employees/data/employeeStore'
+import { leaveService } from '@/features/leave/services/leave.service'
+import { listAttendanceRows } from '@/features/attendance/services/attendance.service'
+import { useAuth } from '@/app/providers/use-auth'
+import { changeAccountPassword } from '@/services/auth.service'
 
 const labels: Record<string, string> = {
   attendance: 'Attendance',
@@ -24,6 +30,7 @@ const labels: Record<string, string> = {
   designations: 'Designations',
   payroll: 'Payroll',
   settings: 'Settings',
+  documents: 'Documents',
 }
 
 const analyticsModules = new Set(['attendance', 'payroll'])
@@ -34,6 +41,7 @@ const DesignationDistribution = lazy(
 const AttendanceInsights = lazy(() => import('@/features/attendance/components/AttendanceInsights'))
 
 export default function ModulePage({ module, subroute }: { module: string; subroute?: string }) {
+  const employees = useEmployees()
   const title = labels[module] ?? module
   const [rows, setRows] = useState<ModuleRow[]>(() => {
     try {
@@ -49,6 +57,13 @@ export default function ModulePage({ module, subroute }: { module: string; subro
   const initialEdit = routeId ? (rows.find((row) => row.id === routeId) ?? null) : null
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All')
+  const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'department' | 'status'>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [attendanceDepartment, setAttendanceDepartment] = useState('All departments')
+  const [attendanceEmployee, setAttendanceEmployee] = useState('All employees')
+  const [attendanceLocation, setAttendanceLocation] = useState('All locations')
+  const [attendanceDate, setAttendanceDate] = useState('')
   const [showForm, setShowForm] = useState(
     subroute === 'create' || subroute === 'apply' || Boolean(initialEdit),
   )
@@ -58,9 +73,11 @@ export default function ModulePage({ module, subroute }: { module: string; subro
   const [name, setName] = useState(initialEdit?.name ?? '')
   const [detail, setDetail] = useState(initialEdit?.department ?? '')
   const [reason, setReason] = useState(initialEdit?.detail ?? '')
+  const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<string[]>(() => initialEdit && module === 'shifts' ? employees.filter((employee) => employee.shift === initialEdit.name).map((employee) => employee.id) : [])
+  const sourceRows = module === 'attendance' ? listAttendanceRows() : rows
   const filtered = useMemo(
     () =>
-      rows.filter((row) => {
+      sourceRows.filter((row) => {
         const matchesQuery = `${row.name} ${row.id} ${row.department} ${row.detail}`
           .toLowerCase()
           .includes(query.toLowerCase())
@@ -68,20 +85,39 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           module === 'payroll' &&
           filter === 'Paid' &&
           ['Processed', 'Paid', 'Approved'].includes(row.status)
-        return matchesQuery && (filter === 'All' || row.status === filter || isPaid)
+        const person = employees.find((employee) => `${employee.firstName} ${employee.lastName}`.toLowerCase() === row.name.toLowerCase())
+        const matchesDepartment = module !== 'attendance' || attendanceDepartment === 'All departments' || row.department === attendanceDepartment
+        const matchesEmployee = module !== 'attendance' || attendanceEmployee === 'All employees' || row.name === attendanceEmployee
+        const matchesLocation = module !== 'attendance' || attendanceLocation === 'All locations' || person?.location === attendanceLocation
+        const rowDate = row.dateKey ?? (/^\d{4}-\d{2}-\d{2}$/.test(row.date) ? row.date : (() => { const parsed = new Date(row.date); return Number.isNaN(parsed.getTime()) ? '' : `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}` })())
+        const matchesDate = module !== 'attendance' || !attendanceDate || rowDate === attendanceDate
+        return matchesQuery && matchesDepartment && matchesEmployee && matchesLocation && matchesDate && (filter === 'All' || row.status === filter || isPaid)
       }),
-    [rows, query, filter, module],
+    [sourceRows, query, filter, module, attendanceDepartment, attendanceEmployee, attendanceLocation, attendanceDate, employees],
   )
+  const pageSize = 10
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  useEffect(() => { if (page > pageCount) setPage(pageCount) }, [page, pageCount])
+  const sorted = useMemo(() => [...filtered].sort((left, right) => {
+    const leftValue = sortBy === 'date' ? left.date : left[sortBy]
+    const rightValue = sortBy === 'date' ? right.date : right[sortBy]
+    const result = String(leftValue ?? '').localeCompare(String(rightValue ?? ''), undefined, { numeric: true, sensitivity: 'base' })
+    return sortDirection === 'asc' ? result : -result
+  }), [filtered, sortBy, sortDirection])
+  const pageRows = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const save = (next: ModuleRow[]) => {
     setRows(next)
     localStorage.setItem(`hrm-${module}`, JSON.stringify(next))
+    window.dispatchEvent(new Event('hrm:data-change'))
   }
 
   const start = () => {
     if (module === 'employees') navigateTo('/app/employees/create')
     else if (module === 'leave') navigateTo('/app/leave/apply')
     else {
+      if (module === 'shifts') setAssignedEmployeeIds([])
       if (module === 'designations') {
         setEditingRow(null)
         setName('')
@@ -119,6 +155,11 @@ export default function ModulePage({ module, subroute }: { module: string; subro
             : row,
         ),
       )
+      if (module === 'shifts') employeeStore.save(employeeStore.getSnapshot().map((employee) => {
+        if (assignedEmployeeIds.includes(employee.id)) return { ...employee, shift: record.name }
+        if (employee.shift === editingRow.name) { const { shift: _previousShift, ...rest } = employee; return rest }
+        return employee
+      }))
       setShowForm(false)
       setEditingRow(null)
       setName('')
@@ -128,6 +169,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
       return
     }
     save([record, ...rows])
+    if (module === 'shifts' && assignedEmployeeIds.length) employeeStore.save(employeeStore.getSnapshot().map((employee) => assignedEmployeeIds.includes(employee.id) ? { ...employee, shift: record.name } : employee))
     setShowForm(false)
     setName('')
     setDetail('')
@@ -137,7 +179,18 @@ export default function ModulePage({ module, subroute }: { module: string; subro
 
   const action = (row: ModuleRow, actionType: 'approve' | 'reject' | 'delete') => {
     if (actionType === 'delete') {
+      const associated = module === 'departments'
+        ? employees.filter((employee) => employee.dept === row.name || (row.name === 'People & Culture' && employee.dept === 'HR'))
+        : module === 'designations'
+          ? employees.filter((employee) => employee.title === row.name)
+          : []
+      if (associated.length) {
+        toast.error(`Cannot delete ${row.name}; ${associated.length} employee record${associated.length === 1 ? '' : 's'} still use it. Reassign or edit them first.`)
+        return
+      }
+      if (!window.confirm(`Delete ${row.name}? This cannot be undone.`)) return
       save(rows.filter((item) => item.id !== row.id))
+      if (module === 'shifts') employeeStore.save(employeeStore.getSnapshot().map((employee) => { if (employee.shift !== row.name) return employee; const { shift: _removedShift, ...rest } = employee; return rest }))
       toast.success('Record deleted')
       return
     }
@@ -163,10 +216,11 @@ export default function ModulePage({ module, subroute }: { module: string; subro
     setName(row.name)
     setDetail(row.department)
     setReason(row.detail)
+    if (module === 'shifts') setAssignedEmployeeIds(employees.filter((employee) => employee.shift === row.name).map((employee) => employee.id))
     setShowForm(true)
   }
 
-  const toggleDesignationStatus = (row: ModuleRow) => {
+  const toggleRecordStatus = (row: ModuleRow) => {
     const status = row.status === 'Active' ? 'Inactive' : 'Active'
     save(rows.map((item) => (item.id === row.id ? { ...item, status } : item)))
     toast.success(`${row.name} ${status === 'Active' ? 'activated' : 'deactivated'}.`)
@@ -339,7 +393,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           onAction={action}
           onView={setViewingRow}
           onEdit={editDesignation}
-          onToggleStatus={toggleDesignationStatus}
+          onToggleStatus={toggleRecordStatus}
         />
       ) : (
         <section className="panel data-panel">
@@ -351,7 +405,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
               <h2>{listTitle}</h2>
               <span>{filtered.length} records</span>
             </div>
-            <div className="table-tools">
+          <div className="table-tools">
               <label className="table-search">
                 <Search size={15} />
                 <input
@@ -382,6 +436,12 @@ export default function ModulePage({ module, subroute }: { module: string; subro
                   <option key={value}>{value}</option>
                 ))}
               </select>
+              <label className="sr-only" htmlFor="module-sort">Sort records by</label>
+              <select id="module-sort" aria-label="Sort records by" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+                <option value="name">Name</option><option value="date">Date</option><option value="department">Department</option><option value="status">Status</option>
+              </select>
+              <button type="button" className="button" aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`} onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>{sortDirection === 'asc' ? 'A–Z' : 'Z–A'}</button>
+              {module === 'attendance' && <><select aria-label="Filter attendance by employee" value={attendanceEmployee} onChange={(event)=>setAttendanceEmployee(event.target.value)}><option>All employees</option>{[...new Set(rows.map((row)=>row.name))].map((name)=><option key={name}>{name}</option>)}</select><select aria-label="Filter attendance by department" value={attendanceDepartment} onChange={(event)=>setAttendanceDepartment(event.target.value)}><option>All departments</option>{[...new Set(rows.map((row)=>row.department))].map((department)=><option key={department}>{department}</option>)}</select><select aria-label="Filter attendance by location" value={attendanceLocation} onChange={(event)=>setAttendanceLocation(event.target.value)}><option>All locations</option>{[...new Set(employees.map((employee)=>employee.location))].map((location)=><option key={location}>{location}</option>)}</select><input aria-label="Filter attendance by date" type="date" value={attendanceDate} onChange={(event)=>setAttendanceDate(event.target.value)} /></>}
               <button
                 className="icon-button"
                 title="Export CSV"
@@ -395,10 +455,11 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           <div className="table-scroll">
             <ModuleDataTable
               module={module}
-              rows={filtered}
+              rows={pageRows}
               onAction={action}
-              onView={module === 'payroll' ? setPayslipRow : undefined}
+              onView={module === 'payroll' ? setPayslipRow : module === 'departments' ? setViewingRow : undefined}
               onEdit={editRecord}
+              onToggleStatus={toggleRecordStatus}
             />
             {!filtered.length && (
               <div className="empty-state">
@@ -412,12 +473,12 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           </div>
           <div className="table-footer">
             <span>
-              Showing {filtered.length} of {rows.length} records
+              Showing {filtered.length ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} matching records ({rows.length} total)
             </span>
             <div>
-              <button disabled>Previous</button>
-              <button className="current-page">1</button>
-              <button disabled>Next</button>
+              <button type="button" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
+              <span className="current-page" aria-live="polite">{currentPage} / {pageCount}</span>
+              <button type="button" disabled={currentPage >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button>
             </div>
           </div>
         </section>
@@ -472,6 +533,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
                 }
               />
             </label>
+            {module === 'shifts' && <label>Assign employees<select multiple value={assignedEmployeeIds} onChange={(event) => setAssignedEmployeeIds(Array.from(event.currentTarget.selectedOptions, (option) => option.value))}>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName} · {employee.id}</option>)}</select><small>Use Ctrl or Command to select multiple employees.</small></label>}
             <label>
               {module === 'attendance'
                 ? 'Department'
@@ -520,7 +582,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           </form>
         </div>
       )}
-      {viewingRow && (
+      {viewingRow && module === 'designations' && (
         <div
           className="modal-backdrop"
           onMouseDown={(event) => event.target === event.currentTarget && setViewingRow(null)}
@@ -585,6 +647,16 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           </section>
         </div>
       )}
+      {viewingRow && module === 'departments' && (
+        <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setViewingRow(null)}>
+          <section className="payslip-modal" role="dialog" aria-modal="true" aria-labelledby="department-detail-title">
+            <button className="modal-close" aria-label="Close department details" onClick={() => setViewingRow(null)}>×</button>
+            <span className="eyebrow">DEPARTMENT DETAILS</span><h2 id="department-detail-title">{viewingRow.name}</h2>
+            <dl><div><dt>Department head</dt><dd>{viewingRow.department || 'Unassigned'}</dd></div><div><dt>Location</dt><dd>{viewingRow.detail || 'Not configured'}</dd></div><div><dt>Employees</dt><dd>{employees.filter((employee) => employee.dept === viewingRow.name || (viewingRow.name === 'People & Culture' && employee.dept === 'HR')).length}</dd></div><div><dt>Active employees</dt><dd>{employees.filter((employee) => (employee.dept === viewingRow.name || (viewingRow.name === 'People & Culture' && employee.dept === 'HR')) && employee.status === 'Active').length}</dd></div><div><dt>Designations</dt><dd>{[...new Set(employees.filter((employee) => employee.dept === viewingRow.name).map((employee) => employee.title))].join(', ') || 'Not configured'}</dd></div><div><dt>Approved leave requests</dt><dd>{leaveService.list().filter((leave) => (employees.some((employee) => employee.id === leave.employeeId && employee.dept === viewingRow.name)) && leave.status === 'Approved').length}</dd></div></dl>
+            <div className="modal-actions"><button className="button" onClick={() => { setViewingRow(null); editRecord(viewingRow) }}>Edit department</button><button className="button primary" onClick={() => setViewingRow(null)}>Done</button></div>
+          </section>
+        </div>
+      )}
       {payslipRow && (
         <div
           className="modal-backdrop"
@@ -643,13 +715,24 @@ export default function ModulePage({ module, subroute }: { module: string; subro
 }
 
 const defaultRolePermissions: Record<string, boolean> = {
-  'HR Administrator:Employees:View': true,
-  'HR Administrator:Employees:Edit': true,
-  'HR Administrator:Leave:Approve': true,
-  'HR Administrator:Payroll:Manage': true,
+  'Super Admin:Settings:Manage': true,
+  'Super Admin:Payroll:Manage': true,
+  'HR Admin:Employees:View': true,
+  'HR Admin:Employees:Edit': true,
+  'HR Admin:Attendance:View': true,
+  'HR Admin:Leave:Approve': true,
+  'HR Admin:Payroll:Manage': true,
+  'HR Manager:Employees:View': true,
+  'HR Manager:Attendance:View': true,
+  'HR Manager:Leave:Approve': true,
+  'HR Manager:Payroll:View': true,
   'Manager:Employees:View': true,
+  'Manager:Attendance:View': true,
   'Manager:Leave:Approve': true,
   'Employee:Employees:View': true,
+  'Employee:Attendance:View': true,
+  'Employee:Leave:View': true,
+  'Employee:Payroll:View': true,
 }
 type AuditEntry = { time: string; actor: string; action: string; scope: string }
 const sampleAudit: AuditEntry[] = [
@@ -682,14 +765,34 @@ function readSettingsRecord<T>(key: string, fallback: T): T {
 }
 
 function SettingsContent() {
+  const { user, updateUser, portal } = useAuth()
+  const linkedEmployee = employeeStore.getSnapshot().find((employee) => employee.id === user?.employeeId || employee.email.toLowerCase() === user?.email.toLowerCase())
   const [tab, setTab] = useState('General')
   const [saved, setSaved] = useState(false)
+  const userSettingsKey = `hrm-account-settings:${user?.id ?? 'guest'}`
+  const [accountProfile, setAccountProfile] = useState(() => ({
+    name: linkedEmployee ? `${linkedEmployee.firstName} ${linkedEmployee.lastName}` : user?.name ?? '',
+    phone: linkedEmployee?.phone ?? user?.phone ?? '', jobTitle: linkedEmployee?.title ?? user?.jobTitle ?? '', department: linkedEmployee?.dept ?? user?.department ?? '',
+    emergencyContactName: linkedEmployee?.emergencyContactName ?? user?.emergencyContactName ?? '', emergencyContactPhone: linkedEmployee?.emergencyContactPhone ?? user?.emergencyContactPhone ?? '',
+  }))
+  const [preferences, setPreferences] = useState<Record<string, boolean>>(() => readSettingsRecord(`${userSettingsKey}:preferences`, {
+    'Email notifications': true, 'Push alerts': true, 'Desktop sounds': false, 'Two-factor authentication': false,
+  }))
+  const [passwordValues, setPasswordValues] = useState({ current: '', next: '', confirm: '' })
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordBusy, setPasswordBusy] = useState(false)
   const [permissions, setPermissions] = useState<Record<string, boolean>>(() =>
     readSettingsRecord('hrm-demo-role-permissions', defaultRolePermissions),
   )
   const [audit, setAudit] = useState<AuditEntry[]>(() =>
     readSettingsRecord('hrm-demo-audit-log', sampleAudit),
   )
+  const [settingsValues, setSettingsValues] = useState<Record<string, string>>(() => readSettingsRecord('hrm-demo-settings', {
+    'Payroll cycle (days)': '30', 'Pay date (day of month)': '1', 'Working days per month': '26', 'Overtime multiplier': '1.5',
+    'PF contribution (%)': '12', 'ESI contribution (%)': '0', 'Professional tax (demo amount)': '25', 'TDS rate (%)': '10',
+    'Default deductions (demo amount)': '0', 'Annual paid leave quota (days)': '18', 'Carry-forward limit (days)': '5',
+    'Accrual per month (days)': '1.5', 'Manager approval required': 'true',
+  }))
   const sections = [
     'General',
     'Profile',
@@ -697,29 +800,56 @@ function SettingsContent() {
     'Appearance',
     'Security',
     'Roles & Permissions',
+    'Leave Policies',
+    'Payroll Settings',
+    'Holiday Calendar',
     'Audit Log',
-  ]
+  ].filter((section) => portal === 'admin' || ['General', 'Profile', 'Notifications', 'Appearance', 'Security'].includes(section))
+  const persistPreferences = (next: Record<string, boolean>) => {
+    setPreferences(next)
+    localStorage.setItem(`${userSettingsKey}:preferences`, JSON.stringify(next))
+    toast.success('Notification preferences saved')
+  }
   const fields =
     tab === 'General'
       ? ['Company name', 'Company email', 'Phone number', 'Address', 'Timezone']
       : tab === 'Profile'
-        ? ['Full name', 'Email address', 'Phone number']
+        ? ['Full name', 'Phone number', 'Job title', 'Department', 'Emergency contact name', 'Emergency contact phone']
         : tab === 'Notifications'
           ? [
               'Email notifications',
-              'Leave notifications',
-              'Attendance notifications',
-              'Payroll notifications',
+              'Push alerts',
+              'Desktop sounds',
+              'Two-factor authentication',
             ]
           : tab === 'Appearance'
-            ? ['Theme', 'Compact mode', 'Sidebar behavior']
+            ? ['Compact mode', 'Sidebar behavior']
             : tab === 'Security'
-              ? ['Password', 'Two-factor authentication', 'Active sessions']
-              : ['Admin role', 'HR role', 'Manager role', 'Employee role']
+              ? ['Current Password', 'New Password', 'Confirm Password']
+              : tab === 'Payroll Settings'
+                ? ['Payroll cycle (days)', 'Pay date (day of month)', 'Working days per month', 'Overtime multiplier', 'PF contribution (%)', 'ESI contribution (%)', 'Professional tax (demo amount)', 'TDS rate (%)', 'Default deductions (demo amount)']
+                : tab === 'Leave Policies'
+                  ? ['Annual paid leave quota (days)', 'Carry-forward limit (days)', 'Accrual per month (days)', 'Manager approval required']
+                  : tab === 'Holiday Calendar'
+                    ? ['Calendar year', 'Holiday name', 'Holiday date', 'Location']
+                    : ['Admin role', 'HR role', 'Manager role', 'Employee role']
 
-  const roles = ['HR Administrator', 'Manager', 'Employee']
-  const modules = ['Employees', 'Leave', 'Payroll']
+  const roles = ['Super Admin', 'HR Admin', 'HR Manager', 'Manager', 'Employee']
+  const modules = ['Employees', 'Attendance', 'Leave', 'Shifts', 'Departments', 'Payroll', 'Reports', 'Settings']
   const actions = ['View', 'Edit', 'Approve', 'Manage']
+  const profileKeyByField: Record<string, keyof typeof accountProfile> = {
+    'Full name': 'name', 'Phone number': 'phone', 'Job title': 'jobTitle', Department: 'department',
+    'Emergency contact name': 'emergencyContactName', 'Emergency contact phone': 'emergencyContactPhone',
+  }
+  const validatePassword = (values: typeof passwordValues, submitting = false) => {
+    if ((!values.current && submitting) || (values.next && !values.current)) return 'Enter your current password.'
+    if (values.next && values.next.length < 8) return 'Use at least 8 characters for the new password.'
+    if (values.confirm && values.next !== values.confirm) return 'New passwords do not match.'
+    if (values.current && values.next && values.current === values.next) return 'Choose a password different from your current one.'
+    if (submitting && !values.next) return 'Enter a new password.'
+    if (submitting && !values.confirm) return 'Confirm your new password.'
+    return ''
+  }
   const saveDemoPermissions = () => {
     localStorage.setItem('hrm-demo-role-permissions', JSON.stringify(permissions))
     const nextAudit = [
@@ -734,6 +864,57 @@ function SettingsContent() {
     localStorage.setItem('hrm-demo-audit-log', JSON.stringify(nextAudit))
     setAudit(nextAudit)
     toast.success('Demo permissions saved in this browser.')
+  }
+  const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (tab === 'Profile') {
+      const name = accountProfile.name.trim()
+      if (!name || !accountProfile.phone.trim()) {
+        toast.error('Enter your name and phone number.')
+        return
+      }
+      const profile = { ...accountProfile, name, phone: accountProfile.phone.trim() }
+      updateUser({ name, phone: profile.phone, jobTitle: profile.jobTitle, department: profile.department, emergencyContactName: profile.emergencyContactName, emergencyContactPhone: profile.emergencyContactPhone })
+      if (linkedEmployee) {
+        employeeStore.save(employeeStore.getSnapshot().map((employee) => employee.id === linkedEmployee.id ? {
+          ...employee,
+          firstName: name.split(/\s+/)[0] ?? name,
+          lastName: name.split(/\s+/).slice(1).join(' '),
+          phone: profile.phone,
+          title: profile.jobTitle,
+          dept: profile.department,
+          emergencyContactName: profile.emergencyContactName,
+          emergencyContactPhone: profile.emergencyContactPhone,
+        } : employee))
+      }
+      toast.success('Profile updated successfully')
+      setSaved(true)
+      return
+    }
+    if (tab === 'Security') {
+      const validationMessage = validatePassword(passwordValues, true)
+      if (validationMessage) {
+        setPasswordError(validationMessage)
+        return
+      }
+      setPasswordError('')
+      setPasswordBusy(true)
+      try {
+        if (!user?.id) throw new Error('Your account could not be identified. Sign in again and retry.')
+        await changeAccountPassword(user.id, passwordValues.current, passwordValues.next)
+        setPasswordValues({ current: '', next: '', confirm: '' })
+        toast.success('Password updated successfully!')
+        setSaved(true)
+      } catch (error) {
+        setPasswordError(error instanceof Error ? error.message : 'Unable to update your password.')
+      } finally {
+        setPasswordBusy(false)
+      }
+      return
+    }
+    localStorage.setItem('hrm-demo-settings', JSON.stringify(settingsValues))
+    setSaved(true)
+    toast.success('Settings updated successfully')
   }
 
   return (
@@ -842,11 +1023,7 @@ function SettingsContent() {
       ) : (
         <form
           className="panel settings-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            setSaved(true)
-            toast.success('Settings updated successfully')
-          }}
+          onSubmit={(event) => void saveSettings(event)}
         >
           <div className="settings-section-heading">
             <div>
@@ -860,36 +1037,55 @@ function SettingsContent() {
               <label className="setting-field" key={field}>
                 <span>{field}</span>
                 {tab === 'Notifications' ? (
-                  <input type="checkbox" defaultChecked={index < 3} />
-                ) : tab === 'Appearance' && index === 0 ? (
-                  <select defaultValue="Light" aria-label={field}>
-                    <option>Light</option>
-                    <option>System</option>
-                  </select>
-                ) : tab === 'Appearance' && index === 1 ? (
-                  <input type="checkbox" aria-label={field} />
-                ) : tab === 'Appearance' && index === 2 ? (
-                  <select defaultValue="Expanded" aria-label={field}>
+                  <input type="checkbox" checked={Boolean(preferences[field])} onChange={(event) => persistPreferences({ ...preferences, [field]: event.target.checked })} />
+                ) : tab === 'Profile' ? (
+                  <input
+                    type="text"
+                    value={accountProfile[profileKeyByField[field]]}
+                    onChange={(event) => setAccountProfile((current) => ({ ...current, [profileKeyByField[field]]: event.target.value }))}
+                  />
+                ) : tab === 'Security' ? (
+                  <input
+                    type="password"
+                    autoComplete={index === 0 ? 'current-password' : 'new-password'}
+                    value={index === 0 ? passwordValues.current : index === 1 ? passwordValues.next : passwordValues.confirm}
+                    onChange={(event) => {
+                      const key = index === 0 ? 'current' : index === 1 ? 'next' : 'confirm'
+                      const nextValues = { ...passwordValues, [key]: event.target.value }
+                      setPasswordValues(nextValues)
+                      setPasswordError(validatePassword(nextValues))
+                    }}
+                  />
+                ) : tab === 'Leave Policies' && field === 'Manager approval required' ? (
+                  <input type="checkbox" checked={settingsValues[field] === 'true'} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: String(event.target.checked) }))} />
+                ) : tab === 'Appearance' && field === 'Compact mode' ? (
+                  <input type="checkbox" aria-label={field} checked={settingsValues[field] === 'true'} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: String(event.target.checked) }))} />
+                ) : tab === 'Appearance' && field === 'Sidebar behavior' ? (
+                  <select value={settingsValues[field] ?? 'Expanded'} aria-label={field} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: event.target.value }))}>
                     <option>Expanded</option>
                     <option>Collapsed</option>
                   </select>
                 ) : tab === 'General' && index === 4 ? (
-                  <select defaultValue="Asia/Kolkata" aria-label={field}>
+                  <select value={settingsValues[field] ?? 'Asia/Kolkata'} aria-label={field} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: event.target.value }))}>
                     <option>Asia/Kolkata</option>
                     <option>UTC</option>
                     <option>America/New_York</option>
                   </select>
                 ) : (
                   <input
-                    type={field.toLowerCase().includes('email') ? 'email' : 'text'}
+                    type={field.toLowerCase().includes('email') ? 'email' : /\b(days|date|rate|amount|quota|limit|accrual|multiplier|contribution|deductions|calendar year|day of month)\b/i.test(field) ? 'number' : 'text'}
                     placeholder={`Enter ${field.toLowerCase()}`}
+                    value={settingsValues[field] ?? ''}
+                    step="any"
+                    onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: event.target.value }))}
                   />
                 )}
               </label>
             ))}
           </div>
+          {tab === 'Security' && passwordError && <p className="field-error" role="alert">{passwordError}</p>}
           <button className="button primary" type="submit">
-            {saved ? 'Saved' : 'Save changes'}
+            {tab === 'Security' ? passwordBusy ? 'Updating…' : 'Update password' : saved ? 'Saved' : 'Save changes'}
           </button>
         </form>
       )}

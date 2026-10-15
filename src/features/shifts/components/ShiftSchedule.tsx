@@ -1,6 +1,10 @@
-import { Clock3, Users } from 'lucide-react'
+import { Clock3 } from 'lucide-react'
 import type { ModuleRow } from '@/features/shared/data/moduleData'
-import { shiftAssignmentCounts } from '@/features/shared/data/moduleData'
+
+const shiftRules: Record<string, { breakDuration: string; grace: string; days: string; overtime: string }> = {
+  'SH-01': { breakDuration: '60 min break', grace: '10 min grace', days: 'Mon–Fri', overtime: '1.5× after scheduled hours' },
+  'SH-02': { breakDuration: '60 min break', grace: '15 min grace', days: 'Mon–Fri', overtime: '1.5× after scheduled hours' },
+}
 
 function toMinutes(value: string) {
   const match = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
@@ -33,21 +37,20 @@ export default function ShiftSchedule({ rows }: { rows: ModuleRow[] }) {
           const left = start === null ? 0 : Math.max(0, Math.min(100, (start - rangeStart) / (rangeEnd - rangeStart) * 100))
           const right = end === null ? 0 : Math.max(0, Math.min(100, (end - rangeStart) / (rangeEnd - rangeStart) * 100))
           const width = start === null || end === null ? 0 : Math.max(3, right - left)
-          const assigned = shiftAssignmentCounts[row.id] ?? 0
+          const rules = shiftRules[row.id] ?? { breakDuration: 'Break not set', grace: 'No grace period', days: 'Working days not set', overtime: 'Overtime rule not set' }
           return (
             <article className="shift-timeline-row" key={row.id}>
-              <div className="shift-timeline-meta"><span className="shift-timeline-icon"><Clock3 size={17} /></span><span><strong>{row.name}</strong><small>{row.detail}</small></span></div>
+              <div className="shift-timeline-meta"><span className="shift-timeline-icon"><Clock3 size={17} /></span><span><strong>{row.name}</strong><small>{rules.breakDuration} · {rules.grace} · {rules.days}</small><small>{rules.overtime}</small></span></div>
               <div className="shift-timeline-track" aria-label={`${row.name}: ${row.department}`}>
                 <span className="shift-timeline-fill" style={{ left: `${left}%`, width: `${width}%` }} />
                 {start !== null && end !== null ? <span className="shift-timeline-time" style={{ left: `${left}%`, width: `${width}%` }}>{row.department}</span> : <span className="shift-timeline-unset">{row.department || 'Schedule details needed'}</span>}
               </div>
-              <span className="shift-timeline-assigned"><Users size={14} />{assigned}</span>
             </article>
           )
         })}
         {!rows.length && <div className="shift-board-empty">No shifts yet. Add a shift to start planning coverage.</div>}
       </div>
-      <div className="shift-board-legend"><span><i /> Scheduled hours</span><span><Users size={14} /> Employee assignments shown at right</span></div>
+      <div className="shift-board-legend"><span><i /> Scheduled hours</span></div>
     </section>
   )
 }

@@ -1,4 +1,6 @@
-import { leaveOverview } from '../data/dashboardData'
+import { leaveService } from '@/features/leave/services/leave.service'
+import { navigateTo } from '@/app/router/navigation'
+import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 
 const leaveStatuses = [
   { key: 'approved', label: 'Approved', color: 'approved' },
@@ -7,6 +9,9 @@ const leaveStatuses = [
 ] as const
 
 export default function LeaveOverview() {
+  useHRMDataChange()
+  const requests = leaveService.list()
+  const leaveOverview = { approved: requests.filter((row) => row.status === 'Approved').length, pending: requests.filter((row) => row.status === 'Pending').length, rejected: requests.filter((row) => row.status === 'Rejected').length }
   const total = leaveOverview.approved + leaveOverview.pending + leaveOverview.rejected
 
   return (
@@ -22,10 +27,10 @@ export default function LeaveOverview() {
             const count = leaveOverview[key]
             const percentage = total ? (count / total) * 100 : 0
             return (
-              <div className={`leave-status-row leave-status-row--${color}`} key={key}>
+              <button className={`leave-status-row leave-status-row--${color} leave-status-row--clickable`} key={key} onClick={() => navigateTo('/app/leave')}>
                 <div className="leave-status-meta"><span>{label}</span><strong>{count}<small>{percentage.toFixed(0)}%</small></strong></div>
                 <div className="leave-status-track" role="progressbar" aria-label={`${label} leave requests`} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count}><span style={{ width: `${percentage}%` }} /></div>
-              </div>
+              </button>
             )
           })}
         </div>

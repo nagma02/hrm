@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
-import { employees } from '../data/employeesData'
+import { employeeStore } from '../data/employeeStore'
+import { useEmployees } from '../hooks/useEmployees'
 import StatusBadge from '@/features/shared/StatusBadge'
 import { navigateTo } from '@/app/router/navigation'
-import { Download, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
+import { Download, Plus, Eye, Pencil, UserX } from 'lucide-react'
 import { toast } from 'sonner'
-import { departmentDistribution, kpiStats } from '@/features/dashboard/data/dashboardData'
 import { buildCsv } from '@/utils/csv'
 
 export default function EmployeesPage() {
@@ -16,27 +16,39 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1)
   const [departmentFilter, setDepartmentFilter] = useState('All departments')
   const [statusFilter, setStatusFilter] = useState('All statuses')
+  const [designationFilter, setDesignationFilter] = useState('All designations')
+  const [locationFilter, setLocationFilter] = useState('All locations')
+  const [employmentFilter, setEmploymentFilter] = useState('All employment types')
+  const [joinFrom, setJoinFrom] = useState('')
+  const [joinTo, setJoinTo] = useState('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const pageSize = 5
 
-  const [allEmployees, setAllEmployees] = useState<(typeof employees)[number][]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('hrm-employees') || 'null') || employees
-    } catch {
-      return employees
-    }
-  })
+  const allEmployees = useEmployees()
+  React.useEffect(() => {
+    const department = new URLSearchParams(window.location.search).get('department')
+    if (department) setDepartmentFilter(department)
+  }, [])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return allEmployees.filter((e: (typeof employees)[number]) => {
+      return allEmployees.filter((e) => {
       const matchesSearch =
         !q ||
-        `${e.firstName} ${e.lastName} ${e.id} ${e.email} ${e.status}`.toLowerCase().includes(q)
+        `${e.firstName} ${e.lastName} ${e.id} ${e.email} ${e.status} ${e.dept} ${e.title}`.toLowerCase().includes(q)
       const matchesDepartment =
         departmentFilter === 'All departments' || e.dept === departmentFilter
       const matchesStatus = statusFilter === 'All statuses' || e.status === statusFilter
-      return matchesSearch && matchesDepartment && matchesStatus
-    })
-  }, [query, allEmployees, departmentFilter, statusFilter])
+      const matchesDesignation = designationFilter === 'All designations' || e.title === designationFilter
+      const matchesLocation = locationFilter === 'All locations' || e.location === locationFilter
+      const matchesEmployment = employmentFilter === 'All employment types' || (e.employmentType ?? 'Full time') === employmentFilter
+      const matchesJoinDate = (!joinFrom || e.joinDate >= joinFrom) && (!joinTo || e.joinDate <= joinTo)
+      const recentMonth = new URLSearchParams(window.location.search).get('new') === 'month'
+      const matchesRecent = !recentMonth || e.joinDate.startsWith(new Date().toISOString().slice(0, 7))
+      return matchesSearch && matchesDepartment && matchesStatus && matchesDesignation && matchesLocation && matchesEmployment && matchesJoinDate && matchesRecent
+    }).sort((a, b) => (Date.parse(b.createdAt ?? b.joinDate) - Date.parse(a.createdAt ?? a.joinDate)) * (sortDirection === 'desc' ? 1 : -1))
+  }, [query, allEmployees, departmentFilter, statusFilter, designationFilter, locationFilter, employmentFilter, joinFrom, joinTo, sortDirection])
+
+  const departmentDistribution = [...new Set(allEmployees.map((employee) => employee.dept))].map((name) => ({ name, count: allEmployees.filter((employee) => employee.dept === name).length }))
 
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -52,7 +64,7 @@ export default function EmployeesPage() {
               onClick={() => {
                 const csv = buildCsv(
                   ['ID', 'First name', 'Last name', 'Department', 'Email', 'Status'],
-                  allEmployees.map((e: (typeof employees)[number]) => [
+                  allEmployees.map((e) => [
                     e.id,
                     e.firstName,
                     e.lastName,
@@ -85,7 +97,7 @@ export default function EmployeesPage() {
           <input
             placeholder="Search employees, id, email..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setPage(1) }}
             className="input"
           />
           <select
@@ -98,8 +110,8 @@ export default function EmployeesPage() {
             }}
           >
             <option>All departments</option>
-            {departmentDistribution.map((department) => (
-              <option key={department.name}>{department.name}</option>
+            {[...new Set([...departmentDistribution.map((department) => department.name), ...allEmployees.map((employee) => employee.dept)])].map((department) => (
+              <option key={department}>{department}</option>
             ))}
           </select>
           <select
@@ -116,12 +128,22 @@ export default function EmployeesPage() {
             <option>Inactive</option>
             <option>Probation</option>
           </select>
+          <select className="input" aria-label="Filter by designation" value={designationFilter} onChange={(event) => { setDesignationFilter(event.target.value); setPage(1) }}><option>All designations</option>{[...new Set(allEmployees.map((employee) => employee.title))].map((item) => <option key={item}>{item}</option>)}</select>
+          <select className="input" aria-label="Filter by location" value={locationFilter} onChange={(event) => { setLocationFilter(event.target.value); setPage(1) }}><option>All locations</option>{[...new Set(allEmployees.map((employee) => employee.location))].map((item) => <option key={item}>{item}</option>)}</select>
+          <select className="input" aria-label="Filter by employment type" value={employmentFilter} onChange={(event) => { setEmploymentFilter(event.target.value); setPage(1) }}><option>All employment types</option>{[...new Set(allEmployees.map((employee) => employee.employmentType ?? 'Full time'))].map((item) => <option key={item}>{item}</option>)}</select>
+          <label className="employee-date-filter">From<input className="input" aria-label="Joining date from" type="date" value={joinFrom} onChange={(event) => { setJoinFrom(event.target.value); setPage(1) }}/></label>
+          <label className="employee-date-filter">To<input className="input" aria-label="Joining date to" type="date" value={joinTo} onChange={(event) => { setJoinTo(event.target.value); setPage(1) }}/></label>
           <button
             className="button"
             onClick={() => {
               setQuery('')
               setDepartmentFilter('All departments')
               setStatusFilter('All statuses')
+              setDesignationFilter('All designations')
+              setLocationFilter('All locations')
+              setEmploymentFilter('All employment types')
+              setJoinFrom('')
+              setJoinTo('')
               setPage(1)
             }}
           >
@@ -137,14 +159,14 @@ export default function EmployeesPage() {
           <div className="card">
             <div style={{ color: 'var(--color-muted)' }}>Active Employees</div>
             <div style={{ fontWeight: 700, fontSize: 21 }}>
-              {allEmployees.filter((e: (typeof employees)[number]) => e.status === 'Active').length}
+              {allEmployees.filter((e) => e.status === 'Active').length}
             </div>
           </div>
           <div className="card">
             <div style={{ color: 'var(--color-muted)' }}>Inactive Employees</div>
             <div style={{ fontWeight: 700, fontSize: 21 }}>
               {
-                allEmployees.filter((e: (typeof employees)[number]) => e.status === 'Inactive')
+                allEmployees.filter((e) => e.status === 'Inactive')
                   .length
               }
             </div>
@@ -152,7 +174,7 @@ export default function EmployeesPage() {
           <div className="card">
             <div style={{ color: 'var(--color-muted)' }}>New This Month</div>
             <div style={{ fontWeight: 700, fontSize: 21 }}>
-              {kpiStats.find((stat) => stat.key === 'new')?.value ?? 0}
+              {allEmployees.filter((employee) => employee.joinDate.startsWith(new Date().toISOString().slice(0, 7))).length}
             </div>
           </div>
         </div>
@@ -196,7 +218,7 @@ export default function EmployeesPage() {
                   <th>Designation</th>
                   <th>Email</th>
                   <th>Phone</th>
-                  <th>Joining Date</th>
+                  <th><button className="text-action" onClick={() => setSortDirection((value) => value === 'desc' ? 'asc' : 'desc')}>Joining Date {sortDirection === 'desc' ? '↓' : '↑'}</button></th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -254,20 +276,16 @@ export default function EmployeesPage() {
                         </button>
                         <button
                           className="button"
-                          aria-label={`Delete ${e.firstName}`}
+                          aria-label={`${e.status.toLowerCase() === 'inactive' ? 'Activate' : 'Deactivate'} ${e.firstName}`}
                           onClick={() => {
-                            if (window.confirm(`Delete ${e.firstName} ${e.lastName}?`)) {
-                              const next = allEmployees.filter(
-                                (person: (typeof employees)[number]) => person.id !== e.id,
-                              )
-                              localStorage.setItem('hrm-employees', JSON.stringify(next))
-                              setAllEmployees(next)
-                              setPage(1)
-                              toast.success('Employee deleted successfully')
+                            const nextStatus = e.status.toLowerCase() === 'inactive' ? 'Active' : 'Inactive'
+                            if (window.confirm(`${nextStatus === 'Inactive' ? 'Deactivate' : 'Reactivate'} ${e.firstName} ${e.lastName}? Their HR history will be retained.`)) {
+                              employeeStore.save(allEmployees.map((person) => person.id === e.id ? { ...person, status: nextStatus } : person))
+                              toast.success(`Employee ${nextStatus.toLowerCase()}.`)
                             }
                           }}
                         >
-                          <Trash2 size={14} />
+                          <UserX size={14} />
                         </button>
                       </div>
                     </td>

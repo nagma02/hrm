@@ -1,27 +1,16 @@
-import { useState } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { navigateTo } from '@/app/router/navigation'
 import { departmentDistribution } from '@/features/dashboard/data/dashboardData'
 import { leaveService } from '@/features/leave/services/leave.service'
+import { useLeaveApplications } from '@/features/leave/hooks/useLeaveApplications'
 import type { LeaveApplication } from '@/features/leave/types/leave.types'
 import type { ModuleRow } from '@/features/shared/data/moduleData'
 
 export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
-  const [pending, setPending] = useState<LeaveApplication[]>(() =>
-    leaveService
-      .list()
-      .filter((request) => request.status === 'Pending')
-      .slice(0, 4),
-  )
-  const reload = () =>
-    setPending(
-      leaveService
-        .list()
-        .filter((request) => request.status === 'Pending')
-        .slice(0, 4),
-    )
+  const requests = useLeaveApplications()
+  const pending: LeaveApplication[] = requests.filter((request) => request.status === 'Pending').slice(0, 4)
   const departmentCounts = rows
     .filter((row) => row.status === 'Absent')
     .reduce<Record<string, number>>((counts, row) => {
@@ -39,10 +28,14 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
       color: ['#10B981', '#34D399', '#0F766E', '#6EE7B7'][index % 4],
     }
   })
-  const update = (request: LeaveApplication, status: 'Approved' | 'Rejected') => {
-    leaveService.updateStatus(request.id, status)
-    reload()
-    toast.success(`Leave request ${status.toLowerCase()}`)
+  const update = async (request: LeaveApplication) => {
+    if (!window.confirm(`Approve ${request.employeeName}’s ${request.leaveType.toLowerCase()} request?`)) return
+    try {
+      await leaveService.updateStatus(request.id, 'Approved')
+      toast.success('Leave request approved.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to approve the leave request.')
+    }
   }
   return (
     <div className="attendance-insights-column">
@@ -133,15 +126,15 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
                     type="button"
                     aria-label={`Approve ${request.employeeName} leave request`}
                     title="Approve"
-                    onClick={() => update(request, 'Approved')}
+                    onClick={() => void update(request)}
                   >
                     <Check size={15} />
                   </button>
                   <button
                     type="button"
-                    aria-label={`Reject ${request.employeeName} leave request`}
-                    title="Reject"
-                    onClick={() => update(request, 'Rejected')}
+                    aria-label={`Review ${request.employeeName} leave request`}
+                    title="Review and decide"
+                    onClick={() => navigateTo(`/app/leave/${encodeURIComponent(request.id)}`)}
                   >
                     <X size={15} />
                   </button>

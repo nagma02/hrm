@@ -2,10 +2,19 @@ import { useEffect, useState } from 'react'
 import { Clock3 } from 'lucide-react'
 import { useAuth } from '@/app/providers/use-auth'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { useEmployeeDisplayName } from '@/features/employees/utils/employee-identity'
+import { recordEmployeeClockIn, recordEmployeeClockOut } from '../services/attendance.service'
 
 function readClockIn(storageKey: string) {
-  const timestamp = Number(localStorage.getItem(storageKey))
-  return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null
+  try {
+    const stored = localStorage.getItem(storageKey)
+    if (!stored) return null
+    const timestamp = Number(stored)
+    return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null
+  } catch {
+    return null
+  }
 }
 
 function durationLabel(seconds: number) {
@@ -19,9 +28,11 @@ function durationLabel(seconds: number) {
   return `${hours}:${minutes}:${remaining}`
 }
 
-export default function AttendanceClockWidget() {
+export default function AttendanceClockWidget({ employeeMode = false }: { employeeMode?: boolean }) {
   const { user } = useAuth()
-  const storageKey = `hrm-attendance-clock-in:${user?.email ?? 'demo'}`
+  const { name, employee } = useEmployeeDisplayName()
+  const canRecordAttendance = !employeeMode || Boolean(employee)
+  const storageKey = `hrm-attendance-clock-in:${employee?.id ?? user?.email?.trim().toLowerCase() ?? 'demo'}`
   const [clockIn, setClockIn] = useState<number | null>(() => readClockIn(storageKey))
   const [now, setNow] = useState(() => Date.now())
 
@@ -31,22 +42,48 @@ export default function AttendanceClockWidget() {
     return () => window.clearInterval(timer)
   }, [clockIn])
 
-  const toggleClock = () => {
-    if (clockIn) {
-      localStorage.setItem(
-        `hrm-attendance-last-shift-seconds:${user?.email ?? 'demo'}`,
-        String(Math.max(0, Math.floor((Date.now() - clockIn) / 1000))),
-      )
-      localStorage.removeItem(storageKey)
-      setClockIn(null)
-      toast.success('You are clocked out. Your demo shift duration was saved.')
-      return
+  useEffect(() => {
+    const syncClock = () => {
+      setClockIn(readClockIn(storageKey))
+      setNow(Date.now())
     }
-    const started = Date.now()
-    localStorage.setItem(storageKey, String(started))
-    setClockIn(started)
-    setNow(started)
-    toast.success('You are clocked in.')
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === storageKey) syncClock()
+    }
+    window.addEventListener('hrm:attendance-clock-change', syncClock)
+    window.addEventListener('storage', syncStorage)
+    return () => {
+      window.removeEventListener('hrm:attendance-clock-change', syncClock)
+      window.removeEventListener('storage', syncStorage)
+    }
+  }, [storageKey])
+
+  const toggleClock = () => {
+    try {
+      if (clockIn) {
+        const endedAt = Date.now()
+        localStorage.setItem(
+          `hrm-attendance-last-shift-seconds:${user?.email ?? 'demo'}`,
+          String(Math.max(0, Math.floor((endedAt - clockIn) / 1000))),
+        )
+        if (employee) recordEmployeeClockOut(employee, clockIn, endedAt)
+        localStorage.removeItem(storageKey)
+        setClockIn(null)
+        setNow(endedAt)
+        window.dispatchEvent(new Event('hrm:attendance-clock-change'))
+        toast.success('You are clocked out. Your attendance record was saved.')
+        return
+      }
+      const started = Date.now()
+      localStorage.setItem(storageKey, String(started))
+      if (employee) recordEmployeeClockIn(employee, started)
+      setClockIn(started)
+      setNow(started)
+      window.dispatchEvent(new Event('hrm:attendance-clock-change'))
+      toast.success('You are clocked in.')
+    } catch {
+      toast.error('Unable to save your attendance. Please try again.')
+    }
   }
 
   return (
@@ -62,15 +99,13 @@ export default function AttendanceClockWidget() {
         <small>
           {clockIn
             ? `Since ${new Date(clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : `Ready for ${user?.name ?? 'your shift'}`}
+            : `Ready for ${name}`}
         </small>
       </div>
-      <button
-        className={clockIn ? 'button attendance-clock-out' : 'button primary'}
-        onClick={toggleClock}
-      >
-        {clockIn ? 'Clock out' : 'Clock in'}
-      </button>
+      <Button variant={clockIn ? 'outline' : 'primary'} className={clockIn ? 'attendance-clock-out' : ''} onClick={toggleClock} disabled={!canRecordAttendance}>
+        {employeeMode ? (clockIn ? 'Punch out' : 'Punch in') : (clockIn ? 'Clock out' : 'Clock in')}
+      </Button>
+      {employeeMode && !employee && <small className="employee-portal-note">Link your employee profile before recording attendance.</small>}
     </section>
   )
 }

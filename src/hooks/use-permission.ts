@@ -1,7 +1,7 @@
-import { useAuth } from '@/app/providers/use-auth'
+import { useRBAC } from '@/hooks/use-rbac'
 
 export function usePermission(permission: string) {
-  const { hasPermission } = useAuth()
+  const { hasPermission } = useRBAC()
 
   return hasPermission(permission)
 }

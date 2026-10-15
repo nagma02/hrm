@@ -1,7 +1,9 @@
 import React from 'react'
-import { departmentDistribution } from '../data/dashboardData'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
 
 export default function EmployeeOverview() {
+  const employees = useEmployees()
+  const departmentDistribution = [...new Set(employees.map((employee) => employee.dept))].map((name) => ({ name, count: employees.filter((employee) => employee.dept === name).length }))
   const total = departmentDistribution.reduce((s, d) => s + d.count, 0)
   return (
     <div className="card">

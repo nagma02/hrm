@@ -1,11 +1,16 @@
-export type ModuleRow = { id: string; name: string; department: string; detail: string; date: string; status: string }
+export type ModuleRow = { id: string; name: string; department: string; detail: string; date: string; status: string; employeeId?: string; dateKey?: string; checkInAt?: string; checkOutAt?: string; breakMinutes?: number; correctionRequestId?: string }
 
 export const moduleSeeds: Record<string, ModuleRow[]> = {
+  documents: [
+    { id: 'DOC-1001', name: 'Employee Handbook', department: 'Company', detail: 'Policy · PDF', date: 'Oct 01, 2026', status: 'Published' },
+    { id: 'DOC-1002', name: 'Code of Conduct', department: 'Company', detail: 'Policy · PDF', date: 'Sep 18, 2026', status: 'Published' },
+    { id: 'DOC-1003', name: 'Identity Verification', department: 'Employee Records', detail: 'Personal · Restricted', date: 'Sep 12, 2026', status: 'Active' },
+  ],
   attendance: [
-    { id: 'AT-2401', name: 'Jane Cooper', department: 'Engineering', detail: '09:02 AM — 05:48 PM', date: 'Oct 05, 2026', status: 'Present' },
-    { id: 'AT-2402', name: 'John Doe', department: 'Design', detail: '09:18 AM — 06:02 PM', date: 'Oct 05, 2026', status: 'Late' },
-    { id: 'AT-2403', name: 'Aisha Khan', department: 'People', detail: 'Paid time off', date: 'Oct 05, 2026', status: 'On Leave' },
-    { id: 'AT-2404', name: 'Michael Smith', department: 'Sales', detail: '—', date: 'Oct 05, 2026', status: 'Absent' },
+    { id: 'AT-2401', name: 'Jane Cooper', department: 'Engineering', detail: '09:02 AM — 05:48 PM', date: 'Oct 08, 2026', status: 'Present' },
+    { id: 'AT-2402', name: 'John Doe', department: 'Design', detail: '09:18 AM — 06:02 PM', date: 'Oct 08, 2026', status: 'Late' },
+    { id: 'AT-2403', name: 'Aisha Khan', department: 'People', detail: 'Paid time off', date: 'Oct 08, 2026', status: 'On Leave' },
+    { id: 'AT-2404', name: 'Michael Smith', department: 'Sales', detail: '—', date: 'Oct 08, 2026', status: 'Absent' },
   ],
   leave: [
     { id: 'LV-1024', name: 'Jane Cooper', department: 'Engineering', detail: 'Annual · Family trip', date: 'Oct 10 – Oct 14', status: 'Pending' },

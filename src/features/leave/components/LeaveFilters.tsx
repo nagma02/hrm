@@ -15,7 +15,7 @@ export default function LeaveFilters({
   onFilterChange: (value: LeaveFilter) => void
   onLeaveTypeChange: (value: string) => void
 }) {
-  const filters: LeaveFilter[] = ['All', 'Pending', 'Approved', 'Rejected']
+  const filters: LeaveFilter[] = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled']
   return (
     <div className="leave-filter-bar">
       <div className="leave-filter-tabs" aria-label="Filter leave requests by status">

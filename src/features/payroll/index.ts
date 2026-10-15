@@ -1,2 +1,5 @@
 export { PayrollPage } from './pages/PayrollPage'
 export { PayrollReportsPage } from './pages/PayrollReportsPage'
+export { PayrollDetailPage } from './pages/PayrollDetailPage'
+export { payrollService } from './services/payroll.service'
+export type { PayrollRecord, PayrollStatus } from './types/payroll.types'

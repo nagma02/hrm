@@ -12,7 +12,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Application error boundary caught an error', { error, errorInfo })
+    if (import.meta.env.DEV) {
+      console.error('Application error boundary caught an error', {
+        error,
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+      })
+    }
   }
 
   override render() {

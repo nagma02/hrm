@@ -1,41 +1,84 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
-import { moduleSeeds, type ModuleRow } from '@/features/shared/data/moduleData'
+import type { ModuleRow } from '@/features/shared/data/moduleData'
 import { attendanceSchema } from '@/schemas/attendance.schema'
 import { sanitizeText } from '@/utils/sanitize-text'
+import { useNavigate } from 'react-router-dom'
+import { employeeStore } from '@/features/employees/data/employeeStore'
+import { useCurrentEmployee } from '@/features/employees/utils/employee-identity'
+import { attendanceDateKey, listAttendanceRows, updateAttendanceRow, type AttendanceCorrectionRecord } from '@/features/attendance/services/attendance.service'
+import { attendanceCorrectionApi } from '@/features/attendance/services/attendance-correction.api'
+import { format, isValid, parse } from 'date-fns'
 
-type CorrectionRecord = {
-  id: string
-  employee: string
-  date: string
-  checkIn: string
-  checkOut: string
-  reason: string
-  status: 'Pending'
-}
-
-function attendanceRows(): ModuleRow[] {
-  try {
-    return JSON.parse(localStorage.getItem('hrm-attendance') || 'null') || moduleSeeds.attendance
-  } catch {
-    return moduleSeeds.attendance
-  }
-}
-
-export function AttendanceCorrectionPage() {
+export function AttendanceCorrectionPage({ employeeOnly = false }: { employeeOnly?: boolean }) {
   const [params] = useSearchParams()
-  const rows = attendanceRows()
-  const selected = rows.find((row) => row.id === params.get('record'))
-  const [employeeName, setEmployeeName] = useState(selected?.name ?? '')
-  const [date, setDate] = useState(selected?.date ?? '')
-  const [checkIn, setCheckIn] = useState(selected?.detail.split('—')[0]?.trim() ?? '')
-  const [checkOut, setCheckOut] = useState(selected?.detail.split('—')[1]?.trim() ?? '')
+  const navigate = useNavigate()
+  const employee = useCurrentEmployee()
+  const rows = listAttendanceRows()
+  const selectedRow = rows.find((row) => row.id === params.get('record'))
+  const selected = employeeOnly && selectedRow && selectedRow.employeeId !== employee?.id && selectedRow.name.toLowerCase() !== `${employee?.firstName} ${employee?.lastName}`.toLowerCase() ? undefined : selectedRow
+  const [corrections, setCorrections] = useState<AttendanceCorrectionRecord[]>([])
+  const [busy, setBusy] = useState(false)
+  const [employeeName, setEmployeeName] = useState(employeeOnly && employee ? `${employee.firstName} ${employee.lastName}` : selected?.name ?? '')
+  const [date, setDate] = useState(selected ? attendanceDateKey(selected) : '')
+  const [checkIn, setCheckIn] = useState('')
+  const [checkOut, setCheckOut] = useState('')
   const [reason, setReason] = useState('')
+  useEffect(() => {
+    let active = true
+    void attendanceCorrectionApi.list().then((items) => {
+      if (active) setCorrections(items)
+    }).catch((error) => {
+      if (active) toast.error(error instanceof Error ? error.message : 'Unable to load attendance correction requests.')
+    })
+    return () => { active = false }
+  }, [])
+  const decide = async (id: string, status: 'Approved' | 'Rejected') => {
+    const target = corrections.find((item) => item.id === id)
+    if (!target || busy) return
+    setBusy(true)
+    try {
+      const decided = await attendanceCorrectionApi.decide(id, status)
+    if (target && status === 'Approved' && target.employeeId) {
+      const rows = listAttendanceRows()
+      const linked = employeeStore.getById(target.employeeId)
+      const dateKey = target.dateKey ?? (/^\d{4}-\d{2}-\d{2}$/.test(target.date) ? target.date : (() => { const parsed = new Date(target.date); return Number.isNaN(parsed.getTime()) ? '' : format(parsed, 'yyyy-MM-dd') })())
+      const existing = rows.find((row) => row.id === target.attendanceRecordId || (row.employeeId === target.employeeId && attendanceDateKey(row) === dateKey))
+      const parseTime = (value: string) => {
+        if (!value || !dateKey) return undefined
+        const parsed = parse(`${dateKey} ${value.trim()}`, 'yyyy-MM-dd hh:mm a', new Date())
+        return isValid(parsed) ? parsed.toISOString() : undefined
+      }
+      const checkInAt = parseTime(target.checkIn) ?? existing?.checkInAt
+      const checkOutAt = parseTime(target.checkOut) ?? existing?.checkOutAt
+      if (linked && dateKey) {
+        const displayDate = format(new Date(`${dateKey}T12:00:00`), 'MMM dd, yyyy')
+        const corrected: ModuleRow = {
+          ...(existing ?? { id: target.attendanceRecordId ?? `AT-${target.employeeId}-${dateKey.replaceAll('-', '')}`, name: `${linked.firstName} ${linked.lastName}`, department: linked.dept, date: displayDate, status: 'Present' }),
+          employeeId: linked.id, name: `${linked.firstName} ${linked.lastName}`, department: linked.dept,
+          detail: `${target.checkIn || target.existingCheckIn || '—'} — ${target.checkOut || target.existingCheckOut || '—'}`,
+          date: displayDate, dateKey, ...(checkInAt ? { checkInAt } : {}), ...(checkOutAt ? { checkOutAt } : {}),
+        }
+        updateAttendanceRow(corrected)
+      }
+    }
+    const next = corrections.map((item) => item.id === id ? decided : item)
+    setCorrections(next)
+    window.dispatchEvent(new Event('hrm:data-change'))
+    toast.success(`Attendance correction ${status.toLowerCase()}.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save the attendance correction decision.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  if (!employeeOnly && !params.get('record')) return <PageContainer><PageHeader title="Attendance corrections" subtitle="Review employee requests to correct their time records." actions={<button className="button" onClick={() => navigate('/app/attendance')}>Back to attendance</button>} /><section className="panel data-panel"><div className="panel-head"><div><h2>Correction requests</h2><span>{corrections.filter((item)=>item.status==='Pending').length} pending</span></div></div><div className="table-scroll"><table className="hr-table"><thead><tr><th>Employee</th><th>Date</th><th>Existing time</th><th>Requested time</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody>{corrections.map((item)=><tr key={item.id}><td>{item.employee}</td><td>{item.date}</td><td>{item.existingCheckIn ?? '—'} – {item.existingCheckOut ?? '—'}</td><td>{item.checkIn} – {item.checkOut}</td><td>{item.reason}</td><td>{item.status}</td><td>{item.status==='Pending'?<div className="row-actions"><button onClick={()=>decide(item.id,'Approved')}>Approve</button><button onClick={()=>decide(item.id,'Rejected')}>Reject</button></div>:item.decisionAt?new Date(item.decisionAt).toLocaleDateString():'—'}</td></tr>)}</tbody></table>{!corrections.length&&<div className="empty-state"><b>No correction requests</b><span>New employee correction requests will appear here.</span></div>}</div></section></PageContainer>
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (
       !attendanceSchema.safeParse({
@@ -49,90 +92,56 @@ export function AttendanceCorrectionPage() {
       toast.error('Enter a valid employee name and attendance status.')
       return
     }
-    const record: CorrectionRecord = {
-      id: `AC-${Date.now()}`,
+    const timePattern = /^(0?[1-9]|1[0-2]):[0-5]\d\s?(AM|PM)$/i
+    if ((!checkIn.trim() && !checkOut.trim()) || (checkIn.trim() && !timePattern.test(checkIn.trim())) || (checkOut.trim() && !timePattern.test(checkOut.trim()))) {
+      toast.error('Enter at least one corrected time in hh:mm AM/PM format.')
+      return
+    }
+    const record = {
       employee: sanitizeText(employeeName),
       date: sanitizeText(date),
       checkIn: sanitizeText(checkIn),
       checkOut: sanitizeText(checkOut),
+      existingCheckIn: selected?.detail.split('—')[0]?.trim() ?? '—',
+      existingCheckOut: selected?.detail.split('—')[1]?.trim() ?? '—',
       reason: sanitizeText(reason),
-      status: 'Pending',
+      attendanceRecordId: selected?.id,
+      employeeId: selected?.employeeId ?? employeeStore.getSnapshot().find((employee) => `${employee.firstName} ${employee.lastName}`.toLowerCase() === employeeName.toLowerCase())?.id,
+      ...(date.match(/^\d{4}-\d{2}-\d{2}$/) ? { dateKey: date } : {}),
     }
-    let records: CorrectionRecord[] = []
+    const duplicate = corrections.some((item) => item.status === 'Pending' && item.employeeId === record.employeeId && (item.dateKey === record.dateKey || item.date === record.date))
+    if (duplicate) { toast.error('A correction request is already pending for this employee and date.'); return }
+    setBusy(true)
     try {
-      records = JSON.parse(
-        localStorage.getItem('hrm-attendance-corrections') || '[]',
-      ) as CorrectionRecord[]
-    } catch {
-      records = []
+      const saved = await attendanceCorrectionApi.submit(record)
+      setCorrections((current) => [saved, ...current.filter((item) => item.id !== saved.id)])
+      window.dispatchEvent(new Event('hrm:data-change'))
+      toast.success('Attendance correction submitted for review.')
+      setReason('')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to submit the attendance correction.')
+    } finally {
+      setBusy(false)
     }
-    localStorage.setItem('hrm-attendance-corrections', JSON.stringify([record, ...records]))
-    toast.success('Attendance correction submitted for review.')
-    setReason('')
   }
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Attendance correction"
-        subtitle="Submit a check-in or check-out correction for review."
-      />
-      <form className="employee-form" onSubmit={submit}>
-        <section className="card">
-          <h2 className="section-title">Correction details</h2>
-          <div className="employee-form-grid">
-            <label className="employee-field">
-              Employee
-              <input
-                required
-                value={employeeName}
-                onChange={(event) => setEmployeeName(event.target.value)}
-              />
-            </label>
-            <label className="employee-field">
-              Attendance date
-              <input
-                required
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                placeholder="Oct 05, 2026"
-              />
-            </label>
-            <label className="employee-field">
-              Correct check-in
-              <input
-                value={checkIn}
-                onChange={(event) => setCheckIn(event.target.value)}
-                placeholder="09:00 AM"
-              />
-            </label>
-            <label className="employee-field">
-              Correct check-out
-              <input
-                value={checkOut}
-                onChange={(event) => setCheckOut(event.target.value)}
-                placeholder="05:30 PM"
-              />
-            </label>
-            <label className="employee-field employee-field--full">
-              Reason
-              <textarea
-                required
-                minLength={10}
-                maxLength={500}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Explain why this attendance record needs correction."
-              />
-            </label>
-          </div>
-        </section>
-        <div className="form-actions">
-          <button className="button primary" type="submit">
-            Submit correction
-          </button>
-        </div>
-      </form>
+  const correctionForm = <form className="employee-form" onSubmit={submit}>
+    <section className="card"><h2 className="section-title">Correction details</h2><div className="employee-form-grid">
+      <div className="employee-field"><span>Existing check-in</span><input readOnly value={selected?.detail.split('—')[0]?.trim() ?? '—'} /></div>
+      <div className="employee-field"><span>Existing check-out</span><input readOnly value={selected?.detail.split('—')[1]?.trim() ?? '—'} /></div>
+      <label className="employee-field">Employee<input required value={employeeName} readOnly={employeeOnly} onChange={(event) => setEmployeeName(event.target.value)} /></label>
+      <label className="employee-field">Attendance date<input required type="date" disabled={Boolean(selected)} value={date.match(/^\d{4}-\d{2}-\d{2}$/) ? date : ''} onChange={(event) => setDate(event.target.value)} /></label>
+      <label className="employee-field">Correct check-in<input value={checkIn} onChange={(event) => setCheckIn(event.target.value)} placeholder="09:00 AM" /></label>
+      <label className="employee-field">Correct check-out<input value={checkOut} onChange={(event) => setCheckOut(event.target.value)} placeholder="05:30 PM" /></label>
+      <label className="employee-field employee-field--full">Reason<textarea required minLength={10} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Explain why this attendance record needs correction." /></label>
+    </div></section><div className="form-actions"><button className="button primary" type="submit">Submit correction</button></div>
+  </form>
+  if (employeeOnly) {
+    const ownRequests = corrections.filter((item) => item.employeeId === employee?.id)
+    return <PageContainer>
+      <PageHeader title="Attendance correction" subtitle="Request a correction and track its review status." />
+      <section className="card employee-dashboard-card"><h2>My correction requests</h2><div className="table-scroll"><table className="hr-table"><thead><tr><th>Date</th><th>Requested time</th><th>Reason</th><th>Status</th></tr></thead><tbody>{ownRequests.map((item) => <tr key={item.id}><td>{item.date}</td><td>{item.checkIn || '—'} – {item.checkOut || '—'}</td><td>{item.reason}</td><td>{item.status}{item.decisionAt && <small>{new Date(item.decisionAt).toLocaleDateString()}</small>}</td></tr>)}</tbody></table>{!ownRequests.length && <p className="empty-state">No correction requests yet.</p>}</div></section>{employee ? correctionForm : <section className="card employee-dashboard-card"><p className="empty-state">Link your employee profile before submitting an attendance correction.</p></section>}
     </PageContainer>
-  )
+  }
+  return <PageContainer><PageHeader title="Attendance correction" subtitle="Submit a check-in or check-out correction for review." />{correctionForm}</PageContainer>
 }
