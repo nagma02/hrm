@@ -58,15 +58,15 @@ export default function AttendanceOverview() {
       <div className="attendance-chart" role="group" aria-label="Weekly attendance chart showing present, absent, and late employees from Monday to Sunday">
         <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
           <ComposedChart data={attendanceWeekly} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-            <CartesianGrid stroke="#e9efeb" strokeDasharray="4 5" vertical={false} />
-            <XAxis dataKey="day" tickFormatter={(day: string) => chartWidth < 520 ? day.slice(0, 3) : day} interval={chartWidth < 520 ? 'preserveStartEnd' : 0} axisLine={false} tickLine={false} tick={{ fill: '#7f8b83', fontSize: chartWidth < 520 ? 9 : 10 }} dy={9} />
-            <YAxis yAxisId="employees" domain={[0, maxAttendance]} axisLine={false} tickLine={false} tick={{ fill: '#68756c', fontSize: 12 }} />
+            <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="4 5" vertical={false} />
+            <XAxis dataKey="day" tickFormatter={(day: string) => chartWidth < 520 ? day.slice(0, 3) : day} interval={chartWidth < 520 ? 'preserveStartEnd' : 0} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: chartWidth < 520 ? 9 : 10 }} dy={9} />
+            <YAxis yAxisId="employees" domain={[0, maxAttendance]} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: 12 }} />
             <YAxis yAxisId="events" orientation="right" domain={[0, maxAttendance]} hide />
             <Tooltip content={ChartTooltip} cursor={{ stroke: '#d8e4dc', strokeDasharray: '4 4' }} animationDuration={180} />
             <Legend verticalAlign="top" align="right" height={32} iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: '#6e7a72', paddingBottom: 5 }} />
-            <Line yAxisId="employees" type="monotone" dataKey="present" name="Present" stroke="#0b7168" strokeWidth={2.7} dot={{ r: 3.5, fill: '#0b7168', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: '#0b7168', stroke: '#fff', strokeWidth: 2 }} />
-            <Line yAxisId="events" type="monotone" dataKey="absent" name="Absent" stroke="#d89b43" strokeWidth={2.2} dot={{ r: 3.5, fill: '#d89b43', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: '#d89b43', stroke: '#fff', strokeWidth: 2 }} />
-            <Line yAxisId="events" type="monotone" dataKey="late" name="Late" stroke="#8292ad" strokeWidth={2.2} dot={{ r: 3.5, fill: '#8292ad', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: '#8292ad', stroke: '#fff', strokeWidth: 2 }} />
+            <Line yAxisId="employees" type="monotone" dataKey="present" name="Present" stroke="var(--chart-present)" strokeWidth={2.7} dot={{ r: 3.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 2 }} />
+            <Line yAxisId="events" type="monotone" dataKey="absent" name="Absent" stroke="var(--chart-absent)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-absent)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-absent)', stroke: '#fffefa', strokeWidth: 2 }} />
+            <Line yAxisId="events" type="monotone" dataKey="late" name="Late" stroke="var(--chart-late)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-late)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-late)', stroke: '#fffefa', strokeWidth: 2 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

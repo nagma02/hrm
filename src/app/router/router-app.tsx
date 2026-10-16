@@ -14,13 +14,15 @@ import { UnauthorizedPage } from '@/features/system/pages/UnauthorizedPage'
 import { GuestRoute } from './guest-route'
 import { ProtectedRoute } from './protected-route'
 import { PermissionRoute } from './permission-route'
-import { LeaveApprovalPage, LeaveApplyPage, LeaveDetailsPage, LeavePage } from '@/features/leave'
+import { CompOffApprovalPage, LeaveApprovalPage, LeaveApplyPage, LeaveDetailsPage, LeavePage } from '@/features/leave'
 import { AttendanceCorrectionPage } from '@/features/attendance/pages/AttendanceCorrectionPage'
 import { AttendanceDetailsPage } from '@/features/attendance/pages/AttendanceDetailsPage'
+import { AttendanceSheetPage, MonthlyAttendanceCalendarPage, UserMonthlyAttendanceReportPage } from '@/features/attendance/pages/AttendanceViewsPage'
 import { PayrollReportsPage } from '@/features/payroll/pages/PayrollReportsPage'
 import { PayrollPage } from '@/features/payroll/pages/PayrollPage'
 import { PaymentsPage } from '@/features/payroll/pages/PaymentsPage'
 import { PayrollDetailPage } from '@/features/payroll/pages/PayrollDetailPage'
+import { EmployeeDeductionsPage, PayrollApprovalsPage, PayrollLoansPage, PayrollSettingsPage } from '@/features/payroll/pages/PayrollNavPages'
 import HolidaysPage from '@/features/hr-content/pages/HolidaysPage'
 import AnnouncementsPage from '@/features/hr-content/pages/AnnouncementsPage'
 import { getPortalLandingPath, normalizeRole } from '@/app/auth/access'
@@ -40,6 +42,7 @@ import EmployeeHolidaysPage from '@/employee/pages/HolidaysPage'
 import EmployeeAnnouncementsPage from '@/employee/pages/AnnouncementsPage'
 import EmployeeProfilePage from '@/employee/pages/ProfilePage'
 import NotificationsPage from '@/features/notifications/pages/NotificationsPage'
+import UserSessionsPage from '@/features/auth/pages/UserSessionsPage'
 
 export function RouterApp() {
   return (
@@ -114,6 +117,7 @@ export function RouterApp() {
           <Route path="/app/holidays" element={<PermissionRoute permission="holiday.view"><HolidaysPage /></PermissionRoute>} />
           <Route path="/app/announcements" element={<PermissionRoute permission="announcement.view"><AnnouncementsPage /></PermissionRoute>} />
           <Route path="/app/notifications" element={<PermissionRoute permission="dashboard.view"><NotificationsPage portal="admin" /></PermissionRoute>} />
+          <Route path="/app/user-sessions" element={<PermissionRoute permission="settings.view"><UserSessionsPage /></PermissionRoute>} />
           <Route path="/app/documents/*" element={<PermissionRoute permission="employee.view"><ModuleRoute module="documents" /></PermissionRoute>} />
           <Route
             path="/app/employees"
@@ -146,6 +150,22 @@ export function RouterApp() {
                 <EmployeeDetailsPage />
               </PermissionRoute>
             }
+          />
+          <Route
+            path="/app/attendance/monthly-calendar"
+            element={<PermissionRoute permission="attendance.view"><MonthlyAttendanceCalendarPage /></PermissionRoute>}
+          />
+          <Route
+            path="/app/attendance/sheet"
+            element={<PermissionRoute permission="attendance.view"><AttendanceSheetPage /></PermissionRoute>}
+          />
+          <Route
+            path="/app/attendance/missing-punch-requests"
+            element={<PermissionRoute permission="attendance.view"><AttendanceCorrectionPage missingPunchMode /></PermissionRoute>}
+          />
+          <Route
+            path="/app/attendance/user-monthly-report"
+            element={<PermissionRoute permission="attendance.view"><UserMonthlyAttendanceReportPage /></PermissionRoute>}
           />
           <Route
             path="/app/attendance/corrections"
@@ -188,6 +208,10 @@ export function RouterApp() {
             }
           />
           <Route
+            path="/app/comp-off/approvals"
+            element={<PermissionRoute permission="leave.approve"><CompOffApprovalPage /></PermissionRoute>}
+          />
+          <Route
             path="/app/leave/:id"
             element={
               <PermissionRoute permission="leave.view">
@@ -228,6 +252,10 @@ export function RouterApp() {
             }
           />
           <Route
+            path="/app/payroll/management"
+            element={<PermissionRoute permission="payroll.view"><PayrollPage /></PermissionRoute>}
+          />
+          <Route
             path="/app/payroll/reports"
             element={
               <PermissionRoute permission="payroll.view">
@@ -235,6 +263,10 @@ export function RouterApp() {
               </PermissionRoute>
             }
           />
+          <Route path="/app/payroll/approvals" element={<PermissionRoute permission="payroll.view"><PayrollApprovalsPage /></PermissionRoute>} />
+          <Route path="/app/payroll/loans" element={<PermissionRoute permission="payroll.view"><PayrollLoansPage /></PermissionRoute>} />
+          <Route path="/app/payroll/settings" element={<PermissionRoute permission="payroll.view"><PayrollSettingsPage /></PermissionRoute>} />
+          <Route path="/app/payroll/deductions" element={<PermissionRoute permission="payroll.view"><EmployeeDeductionsPage /></PermissionRoute>} />
           <Route
             path="/app/payroll/:id"
             element={

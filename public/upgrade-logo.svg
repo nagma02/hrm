@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 550 220" role="img" aria-labelledby="title">
+  <title id="title">Upgrate</title>
+  <path fill="#075844" d="M185 169 277 84l-13-13 67-20-17 68-14-14-92 88z"/>
+  <text x="14" y="191" fill="#075844" font-family="Arial, Helvetica, sans-serif" font-size="137" font-weight="700" letter-spacing="-8">up</text>
+  <text x="168" y="191" fill="#f2c900" stroke="#075844" stroke-width="3.5" paint-order="stroke fill" font-family="Arial, Helvetica, sans-serif" font-size="126" font-weight="700" letter-spacing="-7">grate</text>
+</svg>

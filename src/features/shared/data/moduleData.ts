@@ -1,4 +1,4 @@
-export type ModuleRow = { id: string; name: string; department: string; detail: string; date: string; status: string; employeeId?: string; dateKey?: string; checkInAt?: string; checkOutAt?: string; breakMinutes?: number; correctionRequestId?: string }
+export type ModuleRow = { id: string; name: string; department: string; detail: string; date: string; status: string; employeeId?: string; dateKey?: string; checkInAt?: string; checkOutAt?: string; breakMinutes?: number; correctionRequestId?: string; punchLocation?: { latitude: number; longitude: number }; punchPhoto?: string }
 
 export const moduleSeeds: Record<string, ModuleRow[]> = {
   documents: [

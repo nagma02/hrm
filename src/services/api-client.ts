@@ -1,4 +1,5 @@
 import { APP_STORAGE_KEYS } from '@/constants/app'
+import { appEnv } from '@/app/config/env'
 import { buildDemoUserFromPortal, DEMO_ADMIN_EMAILS, DEMO_ADMIN_PHONES, normalizeEmailAddress } from '@/services/demo-user-profile'
 import type { ApiErrorShape, ApiSuccessResponse } from '@/types/api'
 import type { AuthSession } from '@/types/auth'
@@ -256,7 +257,39 @@ async function request<TData, TBody = unknown>(
   options: RequestOptions<TBody> & { method?: string } = {},
 ): Promise<ApiSuccessResponse<TData>> {
   const { body, method = 'GET' } = options
-  return demoFallbackFor(path, method.toUpperCase(), body) as ApiSuccessResponse<TData>
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const configuredBase = appEnv.apiBaseUrl.replace(/\/+$/, '')
+  const apiPath = normalizedPath.startsWith('/api/') ? normalizedPath : `/api${normalizedPath}`
+  const url = configuredBase
+    ? `${configuredBase.endsWith('/api') && apiPath.startsWith('/api/') ? configuredBase.slice(0, -4) : configuredBase}${apiPath}`
+    : apiPath
+  const session = readStoredSession()
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (session?.accessToken) headers.Authorization = `Bearer ${session.accessToken}`
+
+  try {
+    const response = await fetch(url, {
+      method: method.toUpperCase(),
+      headers,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    })
+    const result = await response.json().catch(() => null) as ApiSuccessResponse<TData> | { success?: false; message?: string } | null
+
+    // Keep demo-only modules usable while their server routes are being added.
+    if (response.status === 404 || !configuredBase && response.status >= 500) {
+      return demoFallbackFor(path, method.toUpperCase(), body) as ApiSuccessResponse<TData>
+    }
+    if (!response.ok || !result || result.success === false) {
+      const errorShape = result && 'message' in result ? result.message : undefined
+      throw new ApiClientError({ status: response.status, message: errorShape || 'The request could not be completed.' })
+    }
+    return result as ApiSuccessResponse<TData>
+  } catch (error) {
+    if (error instanceof ApiClientError || options.signal?.aborted) throw error
+    return demoFallbackFor(path, method.toUpperCase(), body) as ApiSuccessResponse<TData>
+  }
 }
 
 export const apiClient = {

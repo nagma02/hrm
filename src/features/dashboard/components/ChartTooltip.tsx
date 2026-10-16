@@ -13,7 +13,7 @@ export default function ChartTooltip({ active, payload, label }: ChartTooltipPro
       <div className="chart-tooltip__items">
         {entries.map((entry, index) => (
           <div className="chart-tooltip__item" key={`${entry.dataKey ?? entry.name}-${index}`}>
-            <span className="chart-tooltip__series"><i style={{ backgroundColor: entry.color ?? '#0b7168' }} />{entry.name}</span>
+            <span className="chart-tooltip__series"><i style={{ backgroundColor: entry.color ?? 'var(--chart-present)' }} />{entry.name}</span>
             <strong>{Number(entry.value).toLocaleString()}</strong>
           </div>
         ))}

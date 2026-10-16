@@ -25,7 +25,7 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
       name,
       value,
       rate: headcount ? (value / headcount) * 100 : 0,
-      color: ['#10B981', '#34D399', '#0F766E', '#6EE7B7'][index % 4],
+      color: ['var(--chart-present)', 'var(--chart-leave)', 'var(--chart-late)', 'var(--chart-absent)'][index % 4],
     }
   })
   const update = async (request: LeaveApplication) => {
@@ -57,8 +57,10 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
                     nameKey="name"
                     innerRadius="62%"
                     outerRadius="88%"
-                    paddingAngle={3}
-                    stroke="none"
+                    paddingAngle={4}
+                    cornerRadius={5}
+                    stroke="#fffefa"
+                    strokeWidth={3}
                   >
                     {data.map((entry) => (
                       <Cell fill={entry.color} key={entry.name} />
@@ -69,7 +71,7 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
                       `${Number(value)} absent · ${Number(props.payload.rate).toFixed(1)}%`,
                       'Today',
                     ]}
-                    contentStyle={{ border: '1px solid #E2E8F0', borderRadius: 9 }}
+                    contentStyle={{ border: '1px solid #d9d8cc', borderRadius: 9, backgroundColor: '#fffefa' }}
                   />
                 </PieChart>
               </ResponsiveContainer>

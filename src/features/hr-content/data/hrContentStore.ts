@@ -1,11 +1,18 @@
-export type HRHoliday = { id: string; name: string; date: string; type: string; description: string }
+export type HRHoliday = { id: string; name: string; date: string; endDate?: string; duration?: 'full_day' | 'first_half' | 'second_half'; type: string; description: string }
 export type HRAnnouncement = { id: string; title: string; description: string; category: string; priority: 'Low' | 'Normal' | 'High'; publishDate: string; expiryDate: string; audience: string; status: 'Draft' | 'Published'; requiresAcknowledgement?: boolean; attachments?: Array<{ name: string; url: string }> }
 export type HRContentSnapshot = { holidays: HRHoliday[]; announcements: HRAnnouncement[] }
 
 const storageKey = 'hrm-content'
 const holidaySeed: HRHoliday[] = [
-  { id: 'HOL-2026-01', name: 'Diwali Holiday', date: '2026-10-18', type: 'Company holiday', description: 'Organization-wide holiday. Regional observance may vary.' },
-  { id: 'HOL-2026-02', name: 'Winter Break', date: '2026-12-25', type: 'Company holiday', description: 'Annual company winter break.' },
+  { id: 'HOL-2026-01', name: 'Happy New Year', date: '2026-01-01', type: 'Company holiday', description: 'New Year' },
+  { id: 'HOL-2026-02', name: 'Makar Sankranti', date: '2026-01-14', type: 'Regional holiday', description: 'Sankranti Festival' },
+  { id: 'HOL-2026-03', name: 'Republic day', date: '2026-01-26', duration: 'second_half', type: 'Regional holiday', description: '77th Anniversary becoming a Republic.' },
+  { id: 'HOL-2026-04', name: 'MahaShiv Ratri', date: '2026-02-15', type: 'Optional holiday', description: 'Shiv Ratri' },
+  { id: 'HOL-2026-05', name: 'Holi', date: '2026-03-03', endDate: '2026-03-04', type: 'Regional holiday', description: 'Festival of Colours' },
+  { id: 'HOL-2026-06', name: 'Rakshabandhan', date: '2026-08-28', type: 'Regional holiday', description: 'Sibling Festival' },
+  { id: 'HOL-2026-07', name: 'Dussehra', date: '2026-10-20', type: 'Regional holiday', description: 'Vijayadashmi' },
+  { id: 'HOL-2026-08', name: 'Diwali', date: '2026-11-06', endDate: '2026-11-11', type: 'Regional holiday', description: 'Festival of Lights' },
+  { id: 'HOL-2026-09', name: 'Mussoorie Trip', date: '2026-08-05', endDate: '2026-08-06', type: 'Company holiday', description: 'Office Trip to Mussoorie' },
 ]
 const announcementSeed: HRAnnouncement[] = [
   { id: 'ANN-2026-01', title: 'Quarterly town hall and planning update', description: 'Our Q4 company town hall will take place on 18 October at 2:00 PM. Leadership will review business priorities, team goals, and upcoming initiatives for the quarter ahead. Please join with your managers and come prepared with any questions or operational suggestions.', category: 'Notice', priority: 'High', publishDate: '2026-10-08', expiryDate: '2026-10-31', audience: 'All employees', status: 'Published' },
@@ -16,7 +23,10 @@ const announcementSeed: HRAnnouncement[] = [
 function read(): HRContentSnapshot {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Partial<HRContentSnapshot> | null
-    return { holidays: Array.isArray(saved?.holidays) ? saved.holidays : holidaySeed, announcements: Array.isArray(saved?.announcements) ? saved.announcements : announcementSeed }
+    const oldHolidayDemo = Array.isArray(saved?.holidays) && saved.holidays.length === 2
+      && saved.holidays.some((holiday) => holiday.id === 'HOL-2026-01' && holiday.name === 'Diwali Holiday')
+      && saved.holidays.some((holiday) => holiday.id === 'HOL-2026-02' && holiday.name === 'Winter Break')
+    return { holidays: oldHolidayDemo ? holidaySeed : Array.isArray(saved?.holidays) ? saved.holidays : holidaySeed, announcements: Array.isArray(saved?.announcements) ? saved.announcements : announcementSeed }
   } catch { return { holidays: holidaySeed, announcements: announcementSeed } }
 }
 let snapshot = read()

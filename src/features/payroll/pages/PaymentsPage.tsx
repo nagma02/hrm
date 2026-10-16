@@ -1,18 +1,21 @@
 import { useMemo, useState } from 'react'
-import { ArrowRight, BanknoteArrowUp, Clock3, Search } from 'lucide-react'
+import { Download, Eye, Clock3, Search } from 'lucide-react'
+import { ActionDropdown } from '@/components/ui/action-dropdown'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
 import { payrollService } from '@/features/payroll/services/payroll.service'
 import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import { deductionTotal, earningTotal, netSalary } from '@/features/payroll/data/payrollData'
+import type { PayrollRecord } from '@/features/payroll/types/payroll.types'
 
-const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+const money = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
 
 export function PaymentsPage() {
   useHRMDataChange()
   const records = payrollService.list()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('All')
+  const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
 
   const filtered = useMemo(() => {
     return records.filter((record) => {
@@ -26,6 +29,16 @@ export function PaymentsPage() {
   const totalNet = filtered.reduce((sum, record) => sum + netSalary(record), 0)
   const pending = filtered.filter((record) => !['Paid', 'Simulated', 'Failed'].includes(record.status)).reduce((sum, record) => sum + netSalary(record), 0)
   const scheduled = filtered.filter((record) => ['Approved', 'Paid', 'Simulated'].includes(record.status)).length
+  const exportPayments = () => {
+    const escape = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
+    const rows = [['Employee', 'Employee ID', 'Department', 'Gross', 'Deductions', 'Net pay', 'Status'], ...filtered.map((record) => [record.employeeName, record.employeeId, record.department, earningTotal(record), deductionTotal(record), netSalary(record), record.status])]
+    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escape).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'payment-report.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <PageContainer>
@@ -34,8 +47,8 @@ export function PaymentsPage() {
           title="Payments"
           subtitle="Track gross disbursement, approved payouts, and pending salary transfers."
           actions={
-            <button className="button primary" type="button">
-              <BanknoteArrowUp size={15} /> Payment overview
+            <button className="button primary" type="button" onClick={exportPayments}>
+              <Download size={15} /> Export payment report
             </button>
           }
         />
@@ -108,9 +121,12 @@ export function PaymentsPage() {
                       </span>
                     </td>
                     <td>
-                      <button className="text-action" type="button">
-                        View details <ArrowRight size={13} />
-                      </button>
+                      <ActionDropdown
+                        label={`Actions for ${record.employeeName}`}
+                        actions={[
+                          { label: 'View details', icon: <Eye size={13} />, onClick: () => setSelectedRecord(record) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -124,6 +140,7 @@ export function PaymentsPage() {
             <span><Clock3 size={14} /> Demo payment flow only; no bank transfer is triggered.</span>
           </footer>
         </section>
+        {selectedRecord && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedRecord(null)}><section className="payslip-modal" role="dialog" aria-modal="true" aria-labelledby="payment-details-title"><button className="modal-close" aria-label="Close payment details" onClick={() => setSelectedRecord(null)}>×</button><span className="eyebrow">PAYMENT DETAILS · {selectedRecord.period}</span><h2 id="payment-details-title">{selectedRecord.employeeName}</h2><dl><div><dt>Employee ID</dt><dd>{selectedRecord.employeeId}</dd></div><div><dt>Department</dt><dd>{selectedRecord.department}</dd></div><div><dt>Gross pay</dt><dd>{money(earningTotal(selectedRecord))}</dd></div><div><dt>Deductions</dt><dd>{money(deductionTotal(selectedRecord))}</dd></div><div><dt>Net pay</dt><dd>{money(netSalary(selectedRecord))}</dd></div><div><dt>Status</dt><dd>{selectedRecord.status}</dd></div><div><dt>Payment reference</dt><dd>{selectedRecord.referenceId}</dd></div><div><dt>Payment method</dt><dd>{selectedRecord.paymentMethod}</dd></div></dl><p className="payslip-demo-note">Payment data is local demo information; this view does not initiate a bank transfer.</p><button className="button" onClick={() => setSelectedRecord(null)}>Close</button></section></div>}
       </main>
     </PageContainer>
   )

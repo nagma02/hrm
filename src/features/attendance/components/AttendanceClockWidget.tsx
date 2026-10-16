@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
-import { Clock3 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Camera, Clock3, MapPin } from 'lucide-react'
 import { useAuth } from '@/app/providers/use-auth'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useEmployeeDisplayName } from '@/features/employees/utils/employee-identity'
 import { recordEmployeeClockIn, recordEmployeeClockOut } from '../services/attendance.service'
+import { capturePunchLocation, compressPunchPhoto } from '../services/attendance-proof'
 
 function readClockIn(storageKey: string) {
   try {
@@ -31,6 +32,8 @@ function durationLabel(seconds: number) {
 export default function AttendanceClockWidget({ employeeMode = false }: { employeeMode?: boolean }) {
   const { user } = useAuth()
   const { name, employee } = useEmployeeDisplayName()
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [punchMessage, setPunchMessage] = useState('')
   const canRecordAttendance = !employeeMode || Boolean(employee)
   const storageKey = `hrm-attendance-clock-in:${employee?.id ?? user?.email?.trim().toLowerCase() ?? 'demo'}`
   const [clockIn, setClockIn] = useState<number | null>(() => readClockIn(storageKey))
@@ -58,7 +61,7 @@ export default function AttendanceClockWidget({ employeeMode = false }: { employ
     }
   }, [storageKey])
 
-  const toggleClock = () => {
+  const toggleClock = async (photo?: File) => {
     try {
       if (clockIn) {
         const endedAt = Date.now()
@@ -74,15 +77,26 @@ export default function AttendanceClockWidget({ employeeMode = false }: { employ
         toast.success('You are clocked out. Your attendance record was saved.')
         return
       }
+      if (!photo && employeeMode) {
+        photoInputRef.current?.click()
+        return
+      }
       const started = Date.now()
+      const [location, image] = await Promise.all([
+        capturePunchLocation(),
+        photo ? compressPunchPhoto(photo) : Promise.resolve(undefined),
+      ])
       localStorage.setItem(storageKey, String(started))
-      if (employee) recordEmployeeClockIn(employee, started)
+      if (employee) recordEmployeeClockIn(employee, started, { location, ...(image ? { photo: image } : {}) })
       setClockIn(started)
       setNow(started)
       window.dispatchEvent(new Event('hrm:attendance-clock-change'))
       toast.success('You are clocked in.')
-    } catch {
-      toast.error('Unable to save your attendance. Please try again.')
+      setPunchMessage(location ? 'Location and photo saved with this punch.' : 'Photo saved. Location was unavailable.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save your attendance. Please try again.')
+    } finally {
+      if (photoInputRef.current) photoInputRef.current.value = ''
     }
   }
 
@@ -102,9 +116,24 @@ export default function AttendanceClockWidget({ employeeMode = false }: { employ
             : `Ready for ${name}`}
         </small>
       </div>
-      <Button variant={clockIn ? 'outline' : 'primary'} className={clockIn ? 'attendance-clock-out' : ''} onClick={toggleClock} disabled={!canRecordAttendance}>
+      <Button variant={clockIn ? 'outline' : 'primary'} className={clockIn ? 'attendance-clock-out' : ''} onClick={() => void toggleClock()} disabled={!canRecordAttendance}>
         {employeeMode ? (clockIn ? 'Punch out' : 'Punch in') : (clockIn ? 'Clock out' : 'Clock in')}
       </Button>
+      <input
+        ref={photoInputRef}
+        className="sr-only"
+        type="file"
+        accept="image/*"
+        capture="user"
+        aria-label="Take a punch-in photo"
+        onChange={(event) => {
+          const photo = event.currentTarget.files?.[0]
+          if (photo) void toggleClock(photo)
+          else setPunchMessage('Punch-in cancelled. Take a photo to record your punch.')
+        }}
+      />
+      {employeeMode && !clockIn && <small className="attendance-punch-proof"><Camera size={13} /> Photo and location are saved with punch-in</small>}
+      {punchMessage && <small className="attendance-punch-proof"><MapPin size={13} /> {punchMessage}</small>}
       {employeeMode && !employee && <small className="employee-portal-note">Link your employee profile before recording attendance.</small>}
     </section>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Mail, ShieldCheck } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
@@ -26,7 +26,6 @@ type PersistedLoginState = {
   otpChannel: OtpChannel
   otpStatus: string
   resendCountdown: number
-  acceptedTerms: boolean
 }
 
 const LOGIN_FORM_STORAGE_KEY = 'hrm.login.form.state'
@@ -73,9 +72,48 @@ export function LoginForm() {
   const [sendingChannel, setSendingChannel] = useState<OtpChannel | null>(null)
   const [otpStatus, setOtpStatus] = useState(persistedState?.otpStatus ?? '')
   const [resendCountdown, setResendCountdown] = useState(persistedState?.resendCountdown ?? 0)
-  const [acceptedTerms, setAcceptedTerms] = useState(persistedState?.acceptedTerms ?? false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResending, setIsResending] = useState(false)
+  const otpInputRefs = useRef<Array<HTMLInputElement | null>>([])
+
+  const setOtpCode = (value: string) => {
+    const sanitized = value.replace(/\D/g, '').slice(0, 4)
+    setForm((current) => ({ ...current, otp: sanitized }))
+  }
+
+  const handleOtpDigitChange = (index: number, rawValue: string) => {
+    const nextDigit = rawValue.replace(/\D/g, '').slice(-1)
+    const nextOtp = [...form.otp.padEnd(4, '')]
+    nextOtp[index] = nextDigit
+    const combined = nextOtp.join('').replace(/\D/g, '').slice(0, 4)
+    setForm((current) => ({ ...current, otp: combined }))
+    if (nextDigit && index < 3) {
+      otpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (event.key === 'Backspace' && !event.currentTarget.value && index > 0) {
+      otpInputRefs.current[index - 1]?.focus()
+    }
+    if (event.key === 'ArrowLeft' && index > 0) {
+      event.preventDefault()
+      otpInputRefs.current[index - 1]?.focus()
+    }
+    if (event.key === 'ArrowRight' && index < 3) {
+      event.preventDefault()
+      otpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
+    if (!pasted) return
+    event.preventDefault()
+    setOtpCode(pasted)
+    const focusIndex = Math.min(pasted.length, 3)
+    otpInputRefs.current[focusIndex]?.focus()
+  }
 
   useEffect(() => {
     if (!otpSent || resendCountdown === 0) return
@@ -95,11 +133,10 @@ export function LoginForm() {
       otpChannel,
       otpStatus,
       resendCountdown,
-      acceptedTerms,
     }
 
     window.sessionStorage.setItem(LOGIN_FORM_STORAGE_KEY, JSON.stringify(nextState))
-  }, [acceptedTerms, form, loginMode, otpChannel, otpSent, otpStatus, resendCountdown])
+  }, [form, loginMode, otpChannel, otpSent, otpStatus, resendCountdown])
 
   const sendOtp = async (channel: OtpChannel = loginMode === 'email' ? 'email' : 'sms') => {
     setForm((current) => ({ ...current, identifierError: '', authError: '' }))
@@ -131,7 +168,6 @@ export function LoginForm() {
         setForm((current) => ({ ...current, phone: recipient }))
       }
       setForm((current) => ({ ...current, otp: '' }))
-      setAcceptedTerms(false)
       setOtpChannel(channel)
       setOtpSent(true)
       const channelLabel = channel === 'email' ? 'email' : channel === 'sms' ? 'mobile by SMS' : 'mobile by WhatsApp'
@@ -157,7 +193,6 @@ export function LoginForm() {
         ? '/api/auth/send-otp-email'
         : otpChannel === 'sms' ? '/api/auth/send-otp-sms' : '/api/auth/send-otp-whatsapp'
       await postApi(path, otpChannel === 'email' ? { email: identifier } : { mobile: identifier })
-      setAcceptedTerms(false)
       setForm((current) => ({ ...current, otp: '' }))
       const channelLabel = otpChannel === 'email' ? 'email' : otpChannel === 'sms' ? 'mobile by SMS' : 'mobile by WhatsApp'
       setOtpStatus(`If your account is registered, an OTP has been sent to your ${channelLabel}.`)
@@ -174,7 +209,6 @@ export function LoginForm() {
 
   const changeCredentials = () => {
     setOtpSent(false)
-    setAcceptedTerms(false)
     setForm((current) => ({ ...current, otp: '', authError: '' }))
     setOtpStatus('')
     setResendCountdown(0)
@@ -198,12 +232,6 @@ export function LoginForm() {
     }
 
     setForm((current) => ({ ...current, authError: '' }))
-    if (!acceptedTerms) {
-      const message = 'Please accept the Terms of Use and Privacy Policy to continue.'
-      setForm((current) => ({ ...current, authError: message }))
-      toast.error(message)
-      return
-    }
     if (!/^\d{4}$/.test(form.otp)) {
       setForm((current) => ({ ...current, authError: `Enter the 4-digit OTP sent to your ${loginMode === 'email' ? 'email' : 'mobile number'}.` }))
       return
@@ -235,13 +263,7 @@ export function LoginForm() {
     <div className="login-form-column">
       <section className="login-form-panel !min-h-[520px] !flex !flex-col !justify-between transition-all duration-300 ease-in-out" aria-labelledby="login-title">
         <div className="login-form-content">
-          <div className="upgrate-logo-mini" aria-label="Upgrate logo">
-            <span className="upgrate-logo-mini__green">up</span>
-            <span className="upgrate-logo-mini__gold">grate</span>
-            <svg className="upgrate-logo-mini__arrow" viewBox="0 0 220 120" aria-hidden="true">
-              <path d="M10 92 L82 92 L146 36 L186 36 L186 52 L220 52 L220 12 L184 12 L184 28 L132 28 L72 84 L10 84 Z" />
-            </svg>
-          </div>
+          <img className="login-upgrate-logo" src="/logo.png" alt="Upgrate" />
           <div className="auth-screen__eyebrow">Welcome back</div>
           <h2 id="login-title" className="auth-screen__title">Sign in to your account</h2>
           <p className="auth-screen__description">{otpSent ? `Enter the one-time password sent to your ${loginMode === 'email' ? 'work email' : 'mobile number'}.` : 'Sign in securely with a one-time password.'}</p>
@@ -292,20 +314,35 @@ export function LoginForm() {
                     {resendCountdown > 0 ? `Resend OTP in 00:${String(resendCountdown).padStart(2, '0')}` : 'Resend OTP'}
                   </button>
                 </div>
-                <div className="login-input-wrap">
-                  <ShieldCheck size={17} aria-hidden="true" />
-                  <input
-                    id="login-otp"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="Enter 4-digit OTP"
-                    value={form.otp}
-                    maxLength={4}
-                    autoFocus={loginMode === 'phone' && otpSent}
-                    onChange={(event) => setForm((current) => ({ ...current, otp: event.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                    aria-describedby="login-otp-hint"
-                  />
+                <input
+                  id="login-otp"
+                  type="text"
+                  value={form.otp}
+                  readOnly
+                  aria-label="Enter OTP (4 Digit)"
+                  className="login-otp-hidden-input"
+                  tabIndex={-1}
+                />
+                <div className="login-otp-group" aria-label="OTP entry boxes">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => { otpInputRefs.current[index] = element }}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={form.otp[index] ?? ''}
+                      maxLength={1}
+                      autoFocus={loginMode === 'phone' && otpSent && index === 0}
+                      onChange={(event) => handleOtpDigitChange(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(event, index)}
+                      onPaste={handleOtpPaste}
+                      aria-label={`OTP digit ${index + 1}`}
+                      aria-describedby="login-otp-hint"
+                      className="login-otp-digit"
+                      onFocus={(event) => event.target.select()}
+                    />
+                  ))}
                 </div>
                 <span id="login-otp-hint" className="login-otp-hint">
                   {loginMode === 'email' ? 'Enter the 4-digit code from your work email.' : `Enter the 4-digit code sent by ${otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
@@ -321,15 +358,6 @@ export function LoginForm() {
                   {' '}and{' '}
                   <Link to="/privacy-policy">Privacy Policy</Link>.
                 </p>
-                <label className="login-consent-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={acceptedTerms}
-                    onChange={(event) => setAcceptedTerms(event.target.checked)}
-                    aria-label="I agree to the Terms of Use and Privacy Policy"
-                  />
-                  <span>I agree to the Terms of Use and Privacy Policy.</span>
-                </label>
               </div>
             )}
 
@@ -346,7 +374,7 @@ export function LoginForm() {
                 </div>
               </div>
             ) : null) : (
-              <button type="submit" className="button button--primary login-submit" disabled={otpSent ? !acceptedTerms || isSubmitting || isResending : isSubmitting || isResending}>
+              <button type="submit" className="button button--primary login-submit" disabled={otpSent ? isSubmitting || isResending : isSubmitting || isResending}>
                 {isResending ? <><span className="login-spinner"/> Sending OTP…</> : isSubmitting ? <><span className="login-spinner"/> {otpSent ? 'Verifying…' : 'Sending OTP…'}</> : <>{otpSent ? loginMode === 'phone' ? 'Verify & Continue' : 'Verify OTP & Login' : 'Send OTP'} <ArrowRight size={16}/></>}
               </button>
             )}

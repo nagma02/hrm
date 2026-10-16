@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   addMonths,
   eachDayOfInterval,
@@ -21,8 +21,22 @@ function dateFromRow(value: string) {
 }
 
 export default function AttendanceCalendar({ rows }: { rows: ModuleRow[] }) {
-  const [month, setMonth] = useState(() => new Date(2026, 9, 1))
-  const [selected, setSelected] = useState(() => new Date(2026, 9, 5))
+  const [today, setToday] = useState(() => new Date())
+  const [month, setMonth] = useState(() => startOfMonth(new Date()))
+  const [selected, setSelected] = useState(() => new Date())
+
+  useEffect(() => {
+    const nextMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+    const timer = window.setTimeout(() => {
+      const nextToday = new Date()
+      setToday(nextToday)
+      setMonth(startOfMonth(nextToday))
+      setSelected(nextToday)
+    }, Math.max(0, nextMidnight.getTime() - Date.now()) + 50)
+
+    return () => window.clearTimeout(timer)
+  }, [today])
+
   const days = useMemo(
     () =>
       eachDayOfInterval({

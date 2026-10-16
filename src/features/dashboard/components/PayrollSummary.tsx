@@ -4,7 +4,7 @@ import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import { payrollService } from '@/features/payroll/services/payroll.service'
 import { earningTotal, netSalary } from '@/features/payroll/data/payrollData'
 
-const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+const money = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
 
 export default function PayrollSummary() {
   useHRMDataChange()

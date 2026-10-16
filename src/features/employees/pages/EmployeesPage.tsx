@@ -6,6 +6,7 @@ import { useEmployees } from '../hooks/useEmployees'
 import StatusBadge from '@/features/shared/StatusBadge'
 import { navigateTo } from '@/app/router/navigation'
 import { Download, Plus, Eye, Pencil, UserX } from 'lucide-react'
+import { ActionDropdown } from '@/components/ui/action-dropdown'
 import { toast } from 'sonner'
 import { buildCsv } from '@/utils/csv'
 
@@ -259,35 +260,24 @@ export default function EmployeesPage() {
                       <StatusBadge status={e.status} />
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          className="button"
-                          aria-label={`View ${e.firstName}`}
-                          onClick={() => navigateTo(`/app/employees/${e.id}`)}
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          className="button"
-                          aria-label={`Edit ${e.firstName}`}
-                          onClick={() => navigateTo(`/app/employees/${e.id}/edit`)}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className="button"
-                          aria-label={`${e.status.toLowerCase() === 'inactive' ? 'Activate' : 'Deactivate'} ${e.firstName}`}
-                          onClick={() => {
-                            const nextStatus = e.status.toLowerCase() === 'inactive' ? 'Active' : 'Inactive'
-                            if (window.confirm(`${nextStatus === 'Inactive' ? 'Deactivate' : 'Reactivate'} ${e.firstName} ${e.lastName}? Their HR history will be retained.`)) {
-                              employeeStore.save(allEmployees.map((person) => person.id === e.id ? { ...person, status: nextStatus } : person))
-                              toast.success(`Employee ${nextStatus.toLowerCase()}.`)
-                            }
-                          }}
-                        >
-                          <UserX size={14} />
-                        </button>
-                      </div>
+                      <ActionDropdown
+                        label={`Actions for ${e.firstName} ${e.lastName}`}
+                        actions={[
+                          { label: 'View details', icon: <Eye size={14} />, onClick: () => navigateTo(`/app/employees/${e.id}`) },
+                          { label: 'Edit employee', icon: <Pencil size={14} />, onClick: () => navigateTo(`/app/employees/${e.id}/edit`) },
+                          {
+                            label: e.status.toLowerCase() === 'inactive' ? 'Activate employee' : 'Deactivate employee',
+                            icon: <UserX size={14} />,
+                            onClick: () => {
+                              const nextStatus = e.status.toLowerCase() === 'inactive' ? 'Active' : 'Inactive'
+                              if (window.confirm(`${nextStatus === 'Inactive' ? 'Deactivate' : 'Reactivate'} ${e.firstName} ${e.lastName}? Their HR history will be retained.`)) {
+                                employeeStore.save(allEmployees.map((person) => person.id === e.id ? { ...person, status: nextStatus } : person))
+                                toast.success(`Employee ${nextStatus.toLowerCase()}.`)
+                              }
+                            },
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

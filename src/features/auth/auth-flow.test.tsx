@@ -67,6 +67,12 @@ function AuthControls() {
   </>
 }
 
+async function fillOtp(user: ReturnType<typeof userEvent.setup>, code: string) {
+  for (const [index, digit] of [...code].entries()) {
+    await user.type(screen.getByLabelText(`OTP digit ${index + 1}`), digit)
+  }
+}
+
 describe('authentication portal flow', () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -82,7 +88,7 @@ describe('authentication portal flow', () => {
 
   afterEach(cleanup)
 
-  it('requires consent before the OTP send action is enabled', async () => {
+  it('allows OTP verification without the extra consent checkbox', async () => {
     const user = userEvent.setup()
     const contextValue = {
       session: null,
@@ -110,12 +116,12 @@ describe('authentication portal flow', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
     const verifyButton = screen.getByRole('button', { name: /verify otp & login/i })
-    expect(verifyButton).toBeDisabled()
-
-    await user.type(screen.getByLabelText('Enter OTP (4 Digit)'), '1234')
-    await user.click(screen.getByLabelText(/i agree to the terms of use and privacy policy/i))
-
     expect(verifyButton).not.toBeDisabled()
+
+    await fillOtp(user, '1234')
+    await user.click(verifyButton)
+
+    await waitFor(() => expect(contextValue.acceptSession).toHaveBeenCalled())
   })
 
   it('restores the typed login values after visiting legal policy pages and returning', async () => {
@@ -155,14 +161,13 @@ describe('authentication portal flow', () => {
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
-    await user.type(screen.getByLabelText('Enter OTP (4 Digit)'), '1234')
-    await user.click(screen.getByLabelText(/i agree to the terms of use and privacy policy/i))
+    await fillOtp(user, '1234')
     await user.click(screen.getByRole('link', { name: /terms of use/i }))
     await user.click(screen.getByRole('link', { name: /back to login/i }))
 
     expect(screen.getByLabelText('Work Email')).toHaveValue('admin@example.test')
     expect(screen.getByLabelText('Enter OTP (4 Digit)')).toHaveValue('1234')
-    expect(screen.getByLabelText(/i agree to the terms of use and privacy policy/i)).toBeChecked()
+    expect(screen.getByText(/by signing up, you agree to our/i)).toBeInTheDocument()
   })
 
   it('hides the Payments menu item from the admin sidebar', () => {
@@ -220,8 +225,7 @@ describe('authentication portal flow', () => {
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
-    await user.type(screen.getByLabelText('Enter OTP (4 Digit)'), '1234')
-    await user.click(screen.getByLabelText(/i agree to the terms of use and privacy policy/i))
+    await fillOtp(user, '1234')
     await user.click(screen.getByRole('button', { name: /verify otp & login/i }))
 
     await waitFor(() => expect(acceptSession).toHaveBeenCalledWith(adminSession))
@@ -269,8 +273,7 @@ describe('authentication portal flow', () => {
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
-    await user.type(screen.getByLabelText('Enter OTP (4 Digit)'), '1234')
-    await user.click(screen.getByLabelText(/i agree to the terms of use and privacy policy/i))
+    await fillOtp(user, '1234')
     await user.click(screen.getByRole('button', { name: /verify otp & login/i }))
 
     await waitFor(() => expect(acceptSession).toHaveBeenCalledWith(employeeSession))

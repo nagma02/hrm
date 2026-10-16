@@ -14,7 +14,6 @@ const iconMap: Record<string, React.ReactNode> = {
   onLeave: <CalendarCheck size={16} />,
   absent: <XCircle size={16} />,
   new: <UserPlus size={16} />,
-  open: <Briefcase size={16} />,
 }
 
 export default function StatsGrid() {
@@ -33,13 +32,12 @@ export default function StatsGrid() {
     onLeave: currentLeaves.filter((row) => row.status === 'Approved' && row.startDate <= today && row.endDate >= today).length,
     absent: todayAttendance.filter((row) => row.status === 'Absent').length,
     new: activeEmployees.filter((employee) => employee.joinDate.startsWith(month)).length,
-    open: currentLeaves.filter((row) => row.status === 'Pending').length,
   }
-  const destinations: Record<string, string> = { total: '/app/employees', present: '/app/attendance', onLeave: '/app/leave', absent: '/app/attendance', new: '/app/employees?new=month', open: '/app/leave?status=Pending' }
+  const destinations: Record<string, string> = { total: '/app/employees', present: '/app/attendance', onLeave: '/app/leave', absent: '/app/attendance', new: '/app/employees?new=month' }
   return (
     <div className="dashboard-grid">
       {kpiStats.map((s) => (
-        <StatsCard key={s.key} icon={iconMap[s.key]} label={s.key === 'total' ? 'Active Employees' : s.key === 'open' ? 'Pending Leave Approvals' : s.label} value={values[s.key] ?? 0} change={0} onClick={() => navigateTo(destinations[s.key])} />
+        <StatsCard key={s.key} icon={iconMap[s.key]} label={s.key === 'total' ? 'Active Employees' : s.label} value={values[s.key] ?? 0} change={0} onClick={() => navigateTo(destinations[s.key])} />
       ))}
     </div>
   )

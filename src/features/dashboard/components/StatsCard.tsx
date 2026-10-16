@@ -26,7 +26,7 @@ export default function StatsCard({ icon, label, value, hint, change, sparkline,
         </div>
 
         <div className="stat-card__side">
-          {points && <svg className="stat-sparkline" viewBox="0 0 70 28" role="img" aria-label={`${label} recent trend`}><polyline points={points} fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          {points && <svg className="stat-sparkline" viewBox="0 0 70 28" role="img" aria-label={`${label} recent trend`}><polyline points={points} fill="none" stroke="var(--chart-present)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
           <div className="stat-card__icon">
             {icon}
           </div>

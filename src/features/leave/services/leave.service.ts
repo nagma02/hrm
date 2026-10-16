@@ -198,6 +198,14 @@ export const leaveService = {
       record = { ...current, status: 'Cancelled', decisionAt: new Date().toISOString() }
     }
     write([record, ...this.list().filter((item) => item.id !== record.id)])
+    await notificationService.notifyLeaveRequestCancelled({
+      id: record.id,
+      employeeId: record.employeeId,
+      employeeName: record.employeeName,
+      leaveType: record.leaveType,
+      startDate: record.startDate,
+      endDate: record.endDate,
+    })
     return record
   },
 }

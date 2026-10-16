@@ -2,6 +2,7 @@ import { employeeStore } from '@/features/employees/data/employeeStore'
 import { moduleSeeds, type ModuleRow } from '@/features/shared/data/moduleData'
 import { format } from 'date-fns'
 import type { Employee } from '@/features/employees/data/employeesData'
+import { notificationService } from '@/features/notifications/services/notification.service'
 
 const storageKey = 'hrm-attendance'
 const correctionStorageKey = 'hrm-attendance-corrections'
@@ -19,6 +20,7 @@ export type AttendanceCorrectionRecord = {
   employeeId?: string
   dateKey?: string
   status: 'Pending' | 'Approved' | 'Rejected'
+  submittedAt?: string
   decisionAt?: string
   decisionComment?: string
 }
@@ -80,22 +82,27 @@ export function listAttendanceRows(): ModuleRow[] {
 
 export function updateAttendanceRow(row: ModuleRow) {
   const rows = readRawRows()
-  const existing = rows.find((item) => item.id === row.id
-    || (item.employeeId === row.employeeId && attendanceDateKey(item) === attendanceDateKey(row)))
+  const existing = rows.find((item) => item.id === row.id)
+    ?? rows.find((item) => item.employeeId === row.employeeId && attendanceDateKey(item) === attendanceDateKey(row))
   const next = existing ? rows.map((item) => item.id === existing.id ? { ...existing, ...row, id: existing.id } : item) : [row, ...rows]
   saveRows(next)
   return row
 }
 
-export function recordEmployeeClockIn(employee: Employee, timestamp: number) {
+export function recordEmployeeClockIn(
+  employee: Employee,
+  timestamp: number,
+  proof?: { location?: { latitude: number; longitude: number }; photo?: string },
+) {
   const rows = readRawRows()
   const date = dateLabel(timestamp)
   const name = `${employee.firstName} ${employee.lastName}`
   const key = dateKey(timestamp)
-  const existing = rows.find((row) => (row.employeeId === employee.id || (!row.employeeId && row.name.toLocaleLowerCase() === name.toLocaleLowerCase())) && (row.dateKey === key || row.date === date))
-  if (existing?.checkInAt) return existing
+  const matchesEmployee = (row: ModuleRow) => (row.employeeId === employee.id || (!row.employeeId && row.name.toLocaleLowerCase() === name.toLocaleLowerCase())) && (row.dateKey === key || row.date === date)
+  const existing = rows.find((row) => matchesEmployee(row) && row.checkInAt && !row.checkOutAt)
+  if (existing) return existing
   const record: ModuleRow = {
-    id: existing?.id ?? `AT-${employee.id}-${format(new Date(timestamp), 'yyyyMMdd')}`,
+    id: `AT-${employee.id}-${format(new Date(timestamp), 'yyyyMMdd-HHmmss')}`,
     name,
     department: employee.dept,
     detail: `${timeLabel(timestamp)} — In progress`,
@@ -104,8 +111,11 @@ export function recordEmployeeClockIn(employee: Employee, timestamp: number) {
     employeeId: employee.id,
     dateKey: key,
     checkInAt: new Date(timestamp).toISOString(),
+    ...(proof?.location ? { punchLocation: proof.location } : {}),
+    ...(proof?.photo ? { punchPhoto: proof.photo } : {}),
   }
-  saveRows(existing ? rows.map((row) => row.id === existing.id ? record : row) : [record, ...rows])
+  saveRows([record, ...rows])
+  void notificationService.notifyAttendancePunch(record, 'IN').catch(() => undefined)
   return record
 }
 
@@ -114,10 +124,10 @@ export function recordEmployeeClockOut(employee: Employee, startedAt: number, en
   const date = dateLabel(startedAt)
   const name = `${employee.firstName} ${employee.lastName}`
   const key = dateKey(startedAt)
-  const existing = rows.find((row) => (row.employeeId === employee.id || (!row.employeeId && row.name.toLocaleLowerCase() === name.toLocaleLowerCase())) && (row.dateKey === key || row.date === date))
-  if (existing?.checkOutAt) return existing
+  const existing = rows.find((row) => (row.employeeId === employee.id || (!row.employeeId && row.name.toLocaleLowerCase() === name.toLocaleLowerCase())) && (row.dateKey === key || row.date === date) && row.checkInAt === new Date(startedAt).toISOString() && !row.checkOutAt)
+  if (!existing) return undefined
   const record: ModuleRow = {
-    id: existing?.id ?? `AT-${employee.id}-${format(new Date(endedAt), 'yyyyMMdd')}`,
+    id: existing.id,
     name,
     department: employee.dept,
     detail: `${timeLabel(startedAt)} — ${timeLabel(endedAt)}`,
@@ -127,7 +137,10 @@ export function recordEmployeeClockOut(employee: Employee, startedAt: number, en
     dateKey: key,
     checkInAt: new Date(startedAt).toISOString(),
     checkOutAt: new Date(endedAt).toISOString(),
+    ...(existing?.punchLocation ? { punchLocation: existing.punchLocation } : {}),
+    ...(existing?.punchPhoto ? { punchPhoto: existing.punchPhoto } : {}),
   }
-  saveRows(existing ? rows.map((row) => row.id === existing.id ? record : row) : [record, ...rows])
+  saveRows(rows.map((row) => row.id === existing.id ? record : row))
+  void notificationService.notifyAttendancePunch(record, 'OUT').catch(() => undefined)
   return record
 }

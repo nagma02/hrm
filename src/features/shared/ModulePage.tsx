@@ -18,7 +18,8 @@ import AttendanceClockWidget from '@/features/attendance/components/AttendanceCl
 import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import { employeeStore } from '@/features/employees/data/employeeStore'
 import { leaveService } from '@/features/leave/services/leave.service'
-import { listAttendanceRows } from '@/features/attendance/services/attendance.service'
+import { listAttendanceCorrections, listAttendanceRows } from '@/features/attendance/services/attendance.service'
+import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import { useAuth } from '@/app/providers/use-auth'
 import { changeAccountPassword } from '@/services/auth.service'
 
@@ -34,6 +35,7 @@ const labels: Record<string, string> = {
 }
 
 const analyticsModules = new Set(['attendance', 'payroll'])
+const localDateKey = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 const ModuleAnalytics = lazy(() => import('./components/ModuleAnalytics'))
 const DesignationDistribution = lazy(
   () => import('@/features/designations/components/DesignationDistribution'),
@@ -41,7 +43,12 @@ const DesignationDistribution = lazy(
 const AttendanceInsights = lazy(() => import('@/features/attendance/components/AttendanceInsights'))
 
 export default function ModulePage({ module, subroute }: { module: string; subroute?: string }) {
+  const attendanceDataRevision = useHRMDataChange()
   const employees = useEmployees()
+  const pendingCorrectionCount = useMemo(
+    () => listAttendanceCorrections().filter((item) => item.status === 'Pending').length,
+    [attendanceDataRevision],
+  )
   const title = labels[module] ?? module
   const [rows, setRows] = useState<ModuleRow[]>(() => {
     try {
@@ -63,7 +70,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
   const [attendanceDepartment, setAttendanceDepartment] = useState('All departments')
   const [attendanceEmployee, setAttendanceEmployee] = useState('All employees')
   const [attendanceLocation, setAttendanceLocation] = useState('All locations')
-  const [attendanceDate, setAttendanceDate] = useState('')
+  const [attendanceDate, setAttendanceDate] = useState(() => localDateKey())
   const [showForm, setShowForm] = useState(
     subroute === 'create' || subroute === 'apply' || Boolean(initialEdit),
   )
@@ -74,6 +81,13 @@ export default function ModulePage({ module, subroute }: { module: string; subro
   const [detail, setDetail] = useState(initialEdit?.department ?? '')
   const [reason, setReason] = useState(initialEdit?.detail ?? '')
   const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<string[]>(() => initialEdit && module === 'shifts' ? employees.filter((employee) => employee.shift === initialEdit.name).map((employee) => employee.id) : [])
+  useEffect(() => {
+    if (module !== 'attendance') return
+    const now = new Date()
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const timer = window.setTimeout(() => setAttendanceDate(localDateKey()), Math.max(0, nextMidnight.getTime() - now.getTime()) + 50)
+    return () => window.clearTimeout(timer)
+  }, [module, attendanceDate])
   const sourceRows = module === 'attendance' ? listAttendanceRows() : rows
   const filtered = useMemo(
     () =>
@@ -89,9 +103,10 @@ export default function ModulePage({ module, subroute }: { module: string; subro
         const matchesDepartment = module !== 'attendance' || attendanceDepartment === 'All departments' || row.department === attendanceDepartment
         const matchesEmployee = module !== 'attendance' || attendanceEmployee === 'All employees' || row.name === attendanceEmployee
         const matchesLocation = module !== 'attendance' || attendanceLocation === 'All locations' || person?.location === attendanceLocation
+        const isActualPunch = module !== 'attendance' || Boolean(row.employeeId && row.checkInAt)
         const rowDate = row.dateKey ?? (/^\d{4}-\d{2}-\d{2}$/.test(row.date) ? row.date : (() => { const parsed = new Date(row.date); return Number.isNaN(parsed.getTime()) ? '' : `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}` })())
-        const matchesDate = module !== 'attendance' || !attendanceDate || rowDate === attendanceDate
-        return matchesQuery && matchesDepartment && matchesEmployee && matchesLocation && matchesDate && (filter === 'All' || row.status === filter || isPaid)
+        const matchesDate = module !== 'attendance' || rowDate === attendanceDate
+        return matchesQuery && matchesDepartment && matchesEmployee && matchesLocation && matchesDate && isActualPunch && (filter === 'All' || row.status === filter || isPaid)
       }),
     [sourceRows, query, filter, module, attendanceDepartment, attendanceEmployee, attendanceLocation, attendanceDate, employees],
   )
@@ -312,9 +327,14 @@ export default function ModulePage({ module, subroute }: { module: string; subro
         </div>
         <div className="heading-actions">
           {module === 'attendance' && (
-            <button className="button" onClick={() => setShowForm(true)}>
-              <Plus size={15} /> Mark attendance
-            </button>
+            <>
+              <button className="button" onClick={() => navigateTo('/app/attendance/corrections')}>
+                <ClipboardList size={15} /> Review corrections{pendingCorrectionCount ? ` (${pendingCorrectionCount})` : ''}
+              </button>
+              <button className="button" onClick={() => setShowForm(true)}>
+                <Plus size={15} /> Mark attendance
+              </button>
+            </>
           )}
           {module === 'leave' && (
             <button className="button" onClick={start}>

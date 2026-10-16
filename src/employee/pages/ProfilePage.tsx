@@ -9,6 +9,7 @@ import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import { findCurrentEmployee } from '@/features/employees/utils/employee-identity'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
+import { notificationService } from '@/features/notifications/services/notification.service'
 
 type ProfileForm = { firstName: string; lastName: string; phone: string; title: string; dept: string; address: string; emergencyContactName: string; emergencyContactPhone: string }
 const textValue = (value?: string) => value?.trim() || 'Not provided'
@@ -46,6 +47,7 @@ export default function ProfilePage() {
       else localStorage.removeItem(`hrm-employee-profile-photo:${employee.id}`)
     }
     updateUser(profile)
+    if (employee) void notificationService.notifyEmployeeProfileUpdated({ id: employee.id, name: profile.name }).catch(() => undefined)
     setPhoto(photoDraft)
     window.dispatchEvent(new Event('hrm:data-change'))
     setEditing(false)

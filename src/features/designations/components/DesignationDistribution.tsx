@@ -11,7 +11,7 @@ export default function DesignationDistribution({ rows }: { rows: ModuleRow[] })
   const data = rows
     .map((row) => ({ name: row.name, department: row.department, employees: employeeCount(row) }))
     .sort((a, b) => b.employees - a.employees)
-  const colors = ['#10B981', '#059669', '#34D399', '#0F766E', '#6EE7B7', '#064E3B', '#A7F3D0']
+  const colors = ['var(--chart-present)', 'var(--chart-leave)', 'var(--chart-late)', 'var(--chart-absent)', 'var(--chart-neutral)']
   const total = data.reduce((sum, row) => sum + row.employees, 0)
 
   return (
@@ -40,8 +40,10 @@ export default function DesignationDistribution({ rows }: { rows: ModuleRow[] })
                   nameKey="name"
                   innerRadius="62%"
                   outerRadius="88%"
-                  paddingAngle={3}
-                  stroke="none"
+                  paddingAngle={4}
+                  cornerRadius={5}
+                  stroke="#fffefa"
+                  strokeWidth={3}
                 >
                   {data.map((entry, index) => (
                     <Cell key={entry.name} fill={colors[index % colors.length]} />
@@ -49,9 +51,10 @@ export default function DesignationDistribution({ rows }: { rows: ModuleRow[] })
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid #d9d8cc',
                     borderRadius: 9,
-                    boxShadow: '0 8px 22px rgb(15 23 42 / 10%)',
+                    backgroundColor: '#fffefa',
+                    boxShadow: '0 8px 22px rgb(53 55 47 / 10%)',
                   }}
                   formatter={(value) => [`${Number(value)} employees`, 'Headcount']}
                   labelFormatter={(label, payload) =>

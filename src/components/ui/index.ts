@@ -1,4 +1,5 @@
 export { Accordion } from './accordion'
+export { ActionDropdown } from './action-dropdown'
 export { Alert } from './alert'
 export { Avatar } from './avatar'
 export { Badge } from './badge'

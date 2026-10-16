@@ -12,6 +12,13 @@ type NotificationInput = Omit<NotificationRecord, 'createdAt' | 'readAt' | 'stat
   recipientRole?: NotificationRecord['recipientRole']
 }
 
+function employeeRecipientId(employeeId: string, employeeName?: string) {
+  const employees = employeeStore.getSnapshot()
+  const direct = employees.find((employee) => employee.id === employeeId)
+  const byName = employeeName ? employees.find((employee) => `${employee.firstName} ${employee.lastName}`.toLowerCase() === employeeName.toLowerCase()) : undefined
+  return direct?.id ?? byName?.id ?? employeeId
+}
+
 function buildNotificationQuery(identityKey?: string, role?: NotificationRole) {
   const query = new URLSearchParams()
   if (identityKey) query.set('recipient', identityKey)
@@ -65,14 +72,17 @@ function saveLocalNotifications(items: NotificationRecord[]) {
   return uniqueItems
 }
 
+function visibleToRecipient(item: NotificationRecord, identityKey?: string, role?: NotificationRole) {
+  const roleName = role === 'admin' ? 'ADMIN' : role === 'employee' ? 'EMPLOYEE' : undefined
+  return (!roleName || !item.recipientRole || item.recipientRole === roleName)
+    && (!identityKey || item.recipientUserId === identityKey
+      || (role === 'employee' && item.recipientUserId === 'ALL-EMPLOYEES')
+      || (role === 'admin' && item.recipientUserId === 'ALL-ADMINS'))
+}
+
 function localList(identityKey?: string, role?: NotificationRole): NotificationListResponse {
-  const roleName = role === 'admin' ? 'ADMIN' : 'EMPLOYEE'
-  const items = localNotifications().filter((item) =>
-    (!role || !item.recipientRole || item.recipientRole === roleName)
-      && (!identityKey || item.recipientUserId === identityKey
-        || (role === 'employee' && item.recipientUserId === 'ALL-EMPLOYEES')
-        || (role === 'admin' && item.recipientUserId === 'ALL-ADMINS')),
-  ).sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+  const items = localNotifications().filter((item) => visibleToRecipient(item, identityKey, role))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
   return { items, unreadCount: items.filter((item) => item.status === 'UNREAD' && !item.readAt).length }
 }
 
@@ -80,7 +90,11 @@ export const notificationService = {
   async listUnread(identityKey?: string, role?: NotificationRole) {
     try {
       const response = await apiClient.get<NotificationListResponse>(`/notifications${buildNotificationQuery(identityKey, role)}`)
-      const items = uniqueNotifications(response.data.items ?? [])
+      const remoteItems = Array.isArray(response.data?.items) ? response.data.items.filter((item) => item && item.id && visibleToRecipient(item, identityKey, role)) : []
+      // Keep browser notifications visible even when the API returns an empty list or
+      // does not yet implement notifications for one of the portal roles.
+      const items = uniqueNotifications([...localList(identityKey, role).items, ...remoteItems])
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       return { items, unreadCount: items.filter((item) => item.status === 'UNREAD' && !item.readAt).length }
     } catch { return localList(identityKey, role) }
   },
@@ -112,6 +126,96 @@ export const notificationService = {
       return response.data
     } catch { return next }
   },
+  async notifyAttendancePunch(punch: {
+    id: string
+    employeeId?: string
+    name: string
+    department: string
+    date: string
+    checkInAt?: string
+    checkOutAt?: string
+  }, kind: 'IN' | 'OUT') {
+    const timestamp = kind === 'IN' ? punch.checkInAt : punch.checkOutAt
+    const time = timestamp
+      ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'just now'
+    const label = kind === 'IN' ? 'punched in' : 'punched out'
+    return this.create({
+      id: `NT-ATTENDANCE-${kind}-${punch.id}`,
+      recipientUserId: 'ALL-ADMINS',
+      recipientRole: 'ADMIN',
+      type: kind === 'IN' ? 'ATTENDANCE_PUNCH_IN' : 'ATTENDANCE_PUNCH_OUT',
+      title: `Employee ${label}`,
+      message: `${punch.name} (${punch.department}) ${label} at ${time}.`,
+      relatedEntityType: 'ATTENDANCE_RECORD',
+      relatedEntityId: punch.id,
+      relatedEntityData: { employeeId: punch.employeeId, date: punch.date, punchType: kind },
+      actionUrl: '/app/attendance',
+    })
+  },
+  async notifyAttendanceCorrectionSubmitted(correction: {
+    id: string
+    employee: string
+    date: string
+    checkIn: string
+    checkOut: string
+    reason: string
+    employeeId?: string
+  }) {
+    return this.create({
+      id: `NT-ATTENDANCE-CORRECTION-${correction.id}`,
+      recipientUserId: 'ALL-ADMINS',
+      recipientRole: 'ADMIN',
+      type: 'ATTENDANCE_CORRECTION_REQUESTED',
+      title: 'Attendance correction requested',
+      message: `${correction.employee} requested an attendance correction for ${correction.date} (${correction.checkIn || '—'} to ${correction.checkOut || '—'}). Reason: ${correction.reason}`,
+      relatedEntityType: 'ATTENDANCE_CORRECTION',
+      relatedEntityId: correction.id,
+      relatedEntityData: { employeeId: correction.employeeId, date: correction.date },
+      actionUrl: '/app/attendance/corrections',
+    })
+  },
+  async notifyAttendanceCorrectionStatus(correction: { id: string; employeeId?: string; employee: string; date: string }, status: 'Approved' | 'Rejected') {
+    if (!correction.employeeId) return
+    return this.create({
+      id: `NT-ATTENDANCE-CORRECTION-${status.toUpperCase()}-${correction.id}`,
+      recipientUserId: employeeRecipientId(correction.employeeId, correction.employee),
+      recipientRole: 'EMPLOYEE',
+      type: 'ATTENDANCE_CORRECTION_RESOLVED',
+      title: `Attendance correction ${status.toLowerCase()}`,
+      message: `Your attendance correction request for ${correction.date} was ${status.toLowerCase()}.`,
+      relatedEntityType: 'ATTENDANCE_CORRECTION',
+      relatedEntityId: correction.id,
+      relatedEntityData: { status },
+      actionUrl: '/app/employee-attendance',
+    })
+  },
+  async notifyCompOffStatus(request: { id: string; employeeId: string; employeeName: string; date: string; type: string }, status: 'Approved' | 'Rejected') {
+    return this.create({
+      id: `NT-COMPOFF-${status.toUpperCase()}-${request.id}`,
+      recipientUserId: employeeRecipientId(request.employeeId, request.employeeName),
+      recipientRole: 'EMPLOYEE',
+      type: status === 'Approved' ? 'LEAVE_REQUEST_APPROVED' : 'LEAVE_REQUEST_REJECTED',
+      title: `Comp off request ${status.toLowerCase()}`,
+      message: `Your ${request.type.toLowerCase()} comp off request for ${request.date} was ${status.toLowerCase()}.`,
+      relatedEntityType: 'COMP_OFF_REQUEST',
+      relatedEntityId: request.id,
+      actionUrl: '/app/employee-leave',
+    })
+  },
+  async notifyEmployeeProfileUpdated(employee: { id: string; name: string }) {
+    return this.create({
+      id: `NT-EMPLOYEE-PROFILE-${employee.id}-${Date.now()}`,
+      recipientUserId: 'ALL-ADMINS',
+      recipientRole: 'ADMIN',
+      type: 'EMPLOYEE_PROFILE_UPDATED',
+      title: 'Employee profile updated',
+      message: `${employee.name} updated their personal profile details.`,
+      relatedEntityType: 'EMPLOYEE_PROFILE',
+      relatedEntityId: employee.id,
+      actionUrl: '/app/employees',
+    })
+  },
   async notifyLeaveRequestSubmitted(leave: { id: string; employeeId: string; employeeName: string; leaveType: string; startDate: string; endDate: string }) {
     return this.create({
       id: `NT-LEAVE-SUBMITTED-${leave.id}`,
@@ -129,7 +233,7 @@ export const notificationService = {
     const verdict = status === 'Approved' ? 'Approved' : 'Rejected'
     return this.create({
       id: `NT-LEAVE-${status.toUpperCase()}-${leave.id}`,
-      recipientUserId: leave.employeeId,
+      recipientUserId: employeeRecipientId(leave.employeeId, leave.employeeName),
       recipientRole: 'EMPLOYEE',
       type: status === 'Approved' ? ('LEAVE_REQUEST_APPROVED' as NotificationType) : ('LEAVE_REQUEST_REJECTED' as NotificationType),
       title: `Leave request ${verdict.toLowerCase()}`,
@@ -137,6 +241,19 @@ export const notificationService = {
       relatedEntityType: 'LEAVE_REQUEST',
       relatedEntityId: leave.id,
       actionUrl: '/employee/leave',
+    })
+  },
+  async notifyLeaveRequestCancelled(leave: { id: string; employeeId: string; employeeName: string; leaveType: string; startDate: string; endDate: string }) {
+    return this.create({
+      id: `NT-LEAVE-CANCELLED-${leave.id}`,
+      recipientUserId: 'ALL-ADMINS',
+      recipientRole: 'ADMIN',
+      type: 'LEAVE_REQUEST_CANCELLED',
+      title: 'Leave request cancelled',
+      message: `${leave.employeeName} cancelled their ${leave.leaveType} request for ${leave.startDate} to ${leave.endDate}.`,
+      relatedEntityType: 'LEAVE_REQUEST',
+      relatedEntityId: leave.id,
+      actionUrl: '/app/leave',
     })
   },
   async publishAnnouncement(announcement: {

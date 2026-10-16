@@ -14,9 +14,16 @@ function toMinutes(value: string) {
   return hours * 60 + Number(match[2])
 }
 
-function shiftHours(value: string) {
-  const [start, end] = value.split('—').map((part) => part.trim())
-  return { start: toMinutes(start), end: toMinutes(end) }
+function shiftHours(value?: string) {
+  if (typeof value !== 'string') return { start: null, end: null }
+
+  const normalized = value.trim()
+  if (!normalized) return { start: null, end: null }
+
+  const [startText, endText] = normalized.replace(/–/g, '—').split('—').map((part) => part.trim())
+  if (!startText || !endText) return { start: null, end: null }
+
+  return { start: toMinutes(startText), end: toMinutes(endText) }
 }
 
 export default function ShiftSchedule({ rows }: { rows: ModuleRow[] }) {
@@ -33,6 +40,7 @@ export default function ShiftSchedule({ rows }: { rows: ModuleRow[] }) {
       <div className="shift-timeline-axis" aria-hidden="true"><span>SHIFT</span><div>{ticks.map((tick) => <span key={tick}>{tick}</span>)}</div></div>
       <div className="shift-timeline-rows">
         {rows.map((row) => {
+          const scheduleLabel = typeof row.department === 'string' && row.department.trim() ? row.department.trim() : 'Schedule details needed'
           const { start, end } = shiftHours(row.department)
           const left = start === null ? 0 : Math.max(0, Math.min(100, (start - rangeStart) / (rangeEnd - rangeStart) * 100))
           const right = end === null ? 0 : Math.max(0, Math.min(100, (end - rangeStart) / (rangeEnd - rangeStart) * 100))
@@ -41,9 +49,9 @@ export default function ShiftSchedule({ rows }: { rows: ModuleRow[] }) {
           return (
             <article className="shift-timeline-row" key={row.id}>
               <div className="shift-timeline-meta"><span className="shift-timeline-icon"><Clock3 size={17} /></span><span><strong>{row.name}</strong><small>{rules.breakDuration} · {rules.grace} · {rules.days}</small><small>{rules.overtime}</small></span></div>
-              <div className="shift-timeline-track" aria-label={`${row.name}: ${row.department}`}>
+              <div className="shift-timeline-track" aria-label={`${row.name}: ${scheduleLabel}`}>
                 <span className="shift-timeline-fill" style={{ left: `${left}%`, width: `${width}%` }} />
-                {start !== null && end !== null ? <span className="shift-timeline-time" style={{ left: `${left}%`, width: `${width}%` }}>{row.department}</span> : <span className="shift-timeline-unset">{row.department || 'Schedule details needed'}</span>}
+                {start !== null && end !== null ? <span className="shift-timeline-time" style={{ left: `${left}%`, width: `${width}%` }}>{scheduleLabel}</span> : <span className="shift-timeline-unset">{scheduleLabel}</span>}
               </div>
             </article>
           )

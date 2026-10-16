@@ -5,6 +5,7 @@ import { useAuth } from '@/app/providers/use-auth'
 import { navigateTo } from '@/app/router/navigation'
 import { useNotifications } from '../hooks/useNotifications'
 import type { NotificationRecord } from '../types/notification.types'
+import { useCurrentEmployee } from '@/features/employees/utils/employee-identity'
 
 function formatDateTime(value: string) {
   const date = new Date(value)
@@ -27,8 +28,9 @@ function isReviewNotification(item: NotificationRecord) {
 
 export function NotificationMenu({ portal = 'admin' }: { portal?: 'admin' | 'employee' }) {
   const { user } = useAuth()
+  const employee = useCurrentEmployee()
   const identityKey = portal === 'employee'
-    ? user?.employeeId || user?.id || user?.email || user?.phone || ''
+    ? employee?.id || user?.employeeId || user?.id || user?.email || user?.phone || ''
     : user?.id || user?.email || user?.phone || ''
   const { items, unreadCount, loading, error, refresh, markRead, markAllRead } = useNotifications(identityKey, portal)
   const visibleItems = useMemo(() => {

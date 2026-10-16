@@ -1,4 +1,5 @@
 import { Check, Eye, Pencil, Power, Printer, Trash2, X } from 'lucide-react'
+import { ActionDropdown, type ActionDropdownItem } from '@/components/ui/action-dropdown'
 import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import {
   departmentManagers,
@@ -7,6 +8,7 @@ import {
 } from '../data/moduleData'
 import { navigateTo } from '@/app/router/navigation'
 import { payrollService } from '@/features/payroll/services/payroll.service'
+import { PunchLocationCell, PunchPhotoCell } from '@/features/attendance/components/PunchProofCells'
 
 type Props = {
   module: string
@@ -78,149 +80,78 @@ export default function ModuleDataTable({
         : module === 'shifts'
           ? employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && employee.shift === row.name).length
           : (designationCounts[row.id] ?? Number(row.detail.match(/(\d+) employees?/)?.[1] ?? 0))
-  const actions = (row: ModuleRow) =>
-    module === 'designations' ? (
-      <div className="row-actions designation-row-actions">
-        <button
-          title="View designation"
-          aria-label={`View ${row.name}`}
-          onClick={() => onView?.(row)}
-        >
-          <Eye size={15} />
-        </button>
-        <button
-          title="Edit designation"
-          aria-label={`Edit ${row.name}`}
-          onClick={() => onEdit?.(row)}
-        >
-          <Pencil size={15} />
-        </button>
-        <button
-          title={row.status === 'Active' ? 'Deactivate designation' : 'Activate designation'}
-          aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`}
-          onClick={() => onToggleStatus?.(row)}
-        >
-          <Power size={15} />
-        </button>
-        <button
-          title="Delete designation"
-          aria-label={`Delete ${row.name}`}
-          onClick={() => onAction(row, 'delete')}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-    ) : ['shifts', 'departments'].includes(module) ? (
-      <div className="row-actions">
-        {module === 'departments' && <button title="View department" aria-label={`View ${row.name}`} onClick={() => onView?.(row)}><Eye size={15}/></button>}
-        <button
-          title={`Edit ${module === 'shifts' ? 'shift' : 'department'}`}
-          aria-label={`Edit ${row.name}`}
-          onClick={() => onEdit?.(row)}
-        >
-          <Pencil size={15} />
-        </button>
-        <button
-          title={row.status === 'Active' ? 'Deactivate' : 'Activate'}
-          aria-label={`${row.status === 'Active' ? 'Deactivate' : 'Activate'} ${row.name}`}
-          onClick={() => onToggleStatus?.(row)}
-        ><Power size={15}/></button>
-        <button
-          title="Delete record"
-          aria-label={`Delete ${row.name}`}
-          onClick={() => onAction(row, 'delete')}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-    ) : (
-      <div className="row-actions">
-        {module === 'payroll' && (
-          <button
-            title="View printable payslip"
-            aria-label={`View payslip for ${row.name}`}
-            onClick={() => onView?.(row)}
-          >
-            <Printer size={15} />
-          </button>
-        )}
-        {module === 'attendance' && (
-          <>
-            <button
-              title="View attendance details"
-              aria-label={`View attendance details for ${row.name}`}
-              onClick={() => navigateTo(`/app/attendance/${encodeURIComponent(row.id)}`)}
-            >
-              <Eye size={15} />
-            </button>
-            <button
-              title="Request an attendance correction"
-              aria-label={`Request attendance correction for ${row.name}`}
-              onClick={() =>
-                navigateTo(`/app/attendance/corrections?record=${encodeURIComponent(row.id)}`)
-              }
-            >
-              <Pencil size={15} />
-            </button>
-          </>
-        )}
-        {row.status === 'Pending' && (
-          <>
-            <button
-              title={module === 'payroll' ? 'Mark as paid' : 'Approve'}
-              aria-label={`${module === 'payroll' ? 'Mark as paid' : 'Approve'} ${row.name}`}
-              onClick={() => onAction(row, 'approve')}
-            >
-              <Check size={15} />
-            </button>
-            <button
-              title="Reject"
-              aria-label={`Reject ${row.name}`}
-              onClick={() => onAction(row, 'reject')}
-            >
-              <X size={15} />
-            </button>
-          </>
-        )}
-        <button
-          title="Delete record"
-          aria-label={`Delete ${row.name}`}
-          onClick={() => onAction(row, 'delete')}
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
-    )
+  const actions = (row: ModuleRow) => {
+    const items: ActionDropdownItem[] = []
+
+    if (module === 'designations') {
+      items.push({ label: 'View designation', icon: <Eye size={14} />, onClick: () => onView?.(row) })
+      items.push({ label: 'Edit designation', icon: <Pencil size={14} />, onClick: () => onEdit?.(row) })
+      items.push({
+        label: row.status === 'Active' ? 'Deactivate designation' : 'Activate designation',
+        icon: <Power size={14} />,
+        onClick: () => onToggleStatus?.(row),
+      })
+      items.push({ label: 'Delete designation', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+    } else if (['shifts', 'departments'].includes(module)) {
+      if (module === 'departments') {
+        items.push({ label: 'View department', icon: <Eye size={14} />, onClick: () => onView?.(row) })
+      }
+      items.push({ label: `Edit ${module === 'shifts' ? 'shift' : 'department'}`, icon: <Pencil size={14} />, onClick: () => onEdit?.(row) })
+      items.push({
+        label: row.status === 'Active' ? 'Deactivate' : 'Activate',
+        icon: <Power size={14} />,
+        onClick: () => onToggleStatus?.(row),
+      })
+      items.push({ label: 'Delete record', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+    } else {
+      if (module === 'payroll') {
+        items.push({ label: 'View payslip', icon: <Printer size={14} />, onClick: () => onView?.(row) })
+      }
+      if (module === 'attendance') {
+        items.push({ label: 'View attendance', icon: <Eye size={14} />, onClick: () => navigateTo(`/app/attendance/${encodeURIComponent(row.id)}`) })
+        items.push({ label: 'Request correction', icon: <Pencil size={14} />, onClick: () => navigateTo(`/app/attendance/corrections?record=${encodeURIComponent(row.id)}`) })
+      }
+      if (row.status === 'Pending') {
+        items.push({ label: module === 'payroll' ? 'Mark as paid' : 'Approve', icon: <Check size={14} />, onClick: () => onAction(row, 'approve') })
+        items.push({ label: 'Reject', icon: <X size={14} />, onClick: () => onAction(row, 'reject') })
+      }
+      items.push({ label: 'Delete record', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+    }
+
+    return items.length ? <ActionDropdown actions={items} label={`Actions for ${row.name}`} /> : null
+  }
 
   if (module === 'attendance')
     return (
       <table className="hr-table module-table attendance-table">
         <thead>
           <tr>
-            <th>Employee</th>
-            <th>Date</th>
-            <th>Check-in</th>
-            <th>Check-out</th>
+            <th>#</th>
+            <th>Name</th>
+            <th>Dept</th>
+            <th>Punch in / out</th>
+            <th>Total hours</th>
+            <th>OT</th>
             <th>Status</th>
-            <th>Working hours</th>
-            <th>Location</th>
-            <th>Overtime</th>
-            <th>Actions</th>
+            <th>View loca.</th>
+            <th>View img</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const times = attendanceTimes(row.detail, row.status)
             const employee = employees.find((item) => `${item.firstName} ${item.lastName}`.toLowerCase() === row.name.toLowerCase())
             const payroll = payrollService.list().find((item) => item.employeeId === employee?.id)
+            const checkIn = row.checkInAt ? new Date(row.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : times.checkIn
+            const checkOut = row.checkOutAt ? new Date(row.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : times.checkOut
             return (
               <tr key={row.id}>
-                <td>
-                  <PersonCell row={row} />
-                </td>
-                <td>{row.date}</td>
-                <td>{times.checkIn}</td>
-                <td>{times.checkOut}</td>
+                <td>{index + 1}</td>
+                <td><div className="attendance-employee-cell"><span className="avatar-mini">{initials(row.name)}</span><span><b>{row.name}</b><small>{employee?.email ?? row.id}</small></span></div></td>
+                <td>{row.department}</td>
+                <td><div className="attendance-punch-times"><span>Punch In: {checkIn}</span><small>Punch Out: {checkOut}</small></div></td>
+                <td>{times.hours}</td>
+                <td>{payroll ? `${payroll.overtimeHours}h` : '—'}</td>
                 <td>
                   <span
                     className={`status-pill status-${row.status.toLowerCase().replaceAll(' ', '-')}`}
@@ -229,10 +160,8 @@ export default function ModuleDataTable({
                     {row.status}
                   </span>
                 </td>
-                <td>{times.hours}</td>
-                <td>{employee?.location ?? '—'}</td>
-                <td>{payroll ? `${payroll.overtimeHours}h` : '—'}</td>
-                <td>{actions(row)}</td>
+                <td><PunchLocationCell location={row.punchLocation} /></td>
+                <td><PunchPhotoCell photo={row.punchPhoto} name={row.name} /></td>
               </tr>
             )
           })}

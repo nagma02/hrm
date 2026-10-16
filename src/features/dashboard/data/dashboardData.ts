@@ -6,7 +6,6 @@ export const kpiStats = [
   { key: 'onLeave', label: 'On Leave', value: attendanceToday.onLeave, change: 0 },
   { key: 'absent', label: 'Absent Today', value: attendanceToday.absent, change: 0.5 },
   { key: 'new', label: 'New Employees This Month', value: 6, change: 50 },
-  { key: 'open', label: 'Open Positions', value: 4, change: -20 },
 ]
 
 export const attendanceSparklines: Record<string, number[]> = {
@@ -34,10 +33,10 @@ export const attendanceSummary = [
 ]
 
 export const attendanceBreakdown = [
-  { name: 'Present', value: attendanceToday.present, color: '#10B981' },
-  { name: 'On Leave', value: attendanceToday.onLeave, color: '#34D399' },
-  { name: 'Late', value: attendanceSummary.find((item) => item.key === 'late')?.value ?? 0, color: '#6EE7B7' },
-  { name: 'Remote', value: 0, color: '#A7F3D0' },
+  { name: 'Present', value: attendanceToday.present, color: 'var(--chart-present)' },
+  { name: 'On Leave', value: attendanceToday.onLeave, color: 'var(--chart-leave)' },
+  { name: 'Late', value: attendanceSummary.find((item) => item.key === 'late')?.value ?? 0, color: 'var(--chart-late)' },
+  { name: 'Remote', value: 0, color: 'var(--chart-neutral)' },
 ]
 
 export const monthlyAttendanceTrends = [
