@@ -24,18 +24,20 @@ vi.mock('@/services/auth.service', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/auth.service')>()
   return { ...actual, ...authMocks }
 })
-vi.mock('@/features/hr-content/hooks/useHRContent', () => ({ useHRContent: () => ({ announcements: [] }) }))
+vi.mock('@/features/hr-content/hooks/useHRContent', () => ({
+  useHRContent: () => ({ announcements: [] }),
+}))
 vi.mock('@/features/organization/components/OrganizationSwitcher', () => ({ default: () => null }))
-vi.mock('@/hooks/use-rbac', () => ({ useRBAC: () => ({
-  isAdminPortalUser: true,
-  isOrganizationUser: false,
-  hasPermission: (permission: string) => [
-    'DASHBOARD.VIEW',
-    'EMPLOYEE.VIEW',
-    'ATTENDANCE.VIEW',
-    'PAYROLL.VIEW',
-  ].includes(permission.toUpperCase()),
-}) }))
+vi.mock('@/hooks/use-rbac', () => ({
+  useRBAC: () => ({
+    isAdminPortalUser: true,
+    isOrganizationUser: false,
+    hasPermission: (permission: string) =>
+      ['DASHBOARD.VIEW', 'EMPLOYEE.VIEW', 'ATTENDANCE.VIEW', 'PAYROLL.VIEW'].includes(
+        permission.toUpperCase(),
+      ),
+  }),
+}))
 
 const adminSession: AuthSession = {
   accessToken: 'admin-token',
@@ -57,14 +59,16 @@ function LocationProbe() {
 
 function AuthControls() {
   const auth = useAuth()
-  return <>
-    <output data-testid="auth-state">{auth.isAuthenticated ? 'signed-in' : 'signed-out'}</output>
-    <output data-testid="portal-state">{auth.portal}</output>
-    <button onClick={() => auth.acceptSession(adminSession)}>Accept session</button>
-    <button onClick={() => auth.setPortal('employee')}>Open employee portal</button>
-    <button onClick={() => auth.setPortal('admin')}>Open admin portal</button>
-    <button onClick={auth.signOut}>Sign out</button>
-  </>
+  return (
+    <>
+      <output data-testid="auth-state">{auth.isAuthenticated ? 'signed-in' : 'signed-out'}</output>
+      <output data-testid="portal-state">{auth.portal}</output>
+      <button onClick={() => auth.acceptSession(adminSession)}>Accept session</button>
+      <button onClick={() => auth.setPortal('employee')}>Open employee portal</button>
+      <button onClick={() => auth.setPortal('admin')}>Open admin portal</button>
+      <button onClick={auth.signOut}>Sign out</button>
+    </>
+  )
 }
 
 async function fillOtp(user: ReturnType<typeof userEvent.setup>, code: string) {
@@ -111,7 +115,7 @@ describe('authentication portal flow', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Work Email'), 'admin@example.test')
+    await user.type(screen.getByLabelText('Email or mobile number'), 'admin@example.test')
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
@@ -122,6 +126,71 @@ describe('authentication portal flow', () => {
     await user.click(verifyButton)
 
     await waitFor(() => expect(contextValue.acceptSession).toHaveBeenCalled())
+  })
+
+  it('preserves the correct digit order when typing a phone number', async () => {
+    const user = userEvent.setup()
+    const contextValue = {
+      session: null,
+      user: null,
+      portal: 'admin' as const,
+      setPortal: vi.fn(),
+      isAuthenticated: false,
+      isInitializing: false,
+      acceptSession: vi.fn(),
+      updateUser: vi.fn(),
+      signOut: vi.fn(),
+      hasPermission: vi.fn(() => false),
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthContext.Provider value={contextValue}>
+          <LoginForm />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    const phoneInput = screen.getByLabelText('Email or mobile number')
+    await user.type(phoneInput, '8178571099')
+
+    await waitFor(() => {
+      expect(phoneInput).toHaveValue('8178571099')
+    })
+    expect(authMocks.requestPhoneLoginOtp).not.toHaveBeenCalled()
+  })
+
+  it('sends OTP via phone after typing a mobile number', async () => {
+    const user = userEvent.setup()
+    const contextValue = {
+      session: null,
+      user: null,
+      portal: 'admin' as const,
+      setPortal: vi.fn(),
+      isAuthenticated: false,
+      isInitializing: false,
+      acceptSession: vi.fn(),
+      updateUser: vi.fn(),
+      signOut: vi.fn(),
+      hasPermission: vi.fn(() => false),
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthContext.Provider value={contextValue}>
+          <LoginForm />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    const phoneInput = screen.getByLabelText('Email or mobile number')
+    await user.type(phoneInput, '9876543210')
+
+    await user.click(screen.getByRole('button', { name: /send otp via sms/i }))
+
+    await waitFor(() =>
+      expect(authMocks.requestPhoneLoginOtp).toHaveBeenCalledWith('+919876543210'),
+    )
   })
 
   it('restores the typed login values after visiting legal policy pages and returning', async () => {
@@ -157,7 +226,7 @@ describe('authentication portal flow', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Work Email'), 'admin@example.test')
+    await user.type(screen.getByLabelText('Email or mobile number'), 'admin@example.test')
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
@@ -165,7 +234,7 @@ describe('authentication portal flow', () => {
     await user.click(screen.getByRole('link', { name: /terms of use/i }))
     await user.click(screen.getByRole('link', { name: /back to login/i }))
 
-    expect(screen.getByLabelText('Work Email')).toHaveValue('admin@example.test')
+    expect(screen.getByLabelText('Email or mobile number')).toHaveValue('admin@example.test')
     expect(screen.getByLabelText('Enter OTP (4 Digit)')).toHaveValue('1234')
     expect(screen.getByText(/by signing up, you agree to our/i)).toBeInTheDocument()
   })
@@ -181,7 +250,13 @@ describe('authentication portal flow', () => {
       acceptSession: vi.fn(),
       updateUser: vi.fn(),
       signOut: vi.fn(),
-      hasPermission: vi.fn((permission) => permission === 'payroll.view' || permission === 'dashboard.view' || permission === 'employee.view' || permission === 'attendance.view'),
+      hasPermission: vi.fn(
+        (permission) =>
+          permission === 'payroll.view' ||
+          permission === 'dashboard.view' ||
+          permission === 'employee.view' ||
+          permission === 'attendance.view',
+      ),
     }
 
     render(
@@ -220,8 +295,8 @@ describe('authentication portal flow', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByLabelText('Work Email')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Work Email'), 'admin@example.test')
+    expect(screen.getByLabelText('Email or mobile number')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Email or mobile number'), 'admin@example.test')
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
@@ -251,25 +326,27 @@ describe('authentication portal flow', () => {
 
     render(
       <MemoryRouter initialEntries={['/login']}>
-        <AuthContext.Provider value={{
-          session: null,
-          user: null,
-          portal: 'admin',
-          setPortal: vi.fn(),
-          isAuthenticated: false,
-          isInitializing: false,
-          acceptSession,
-          updateUser: vi.fn(),
-          signOut: vi.fn(),
-          hasPermission: vi.fn(() => false),
-        }}>
+        <AuthContext.Provider
+          value={{
+            session: null,
+            user: null,
+            portal: 'admin',
+            setPortal: vi.fn(),
+            isAuthenticated: false,
+            isInitializing: false,
+            acceptSession,
+            updateUser: vi.fn(),
+            signOut: vi.fn(),
+            hasPermission: vi.fn(() => false),
+          }}
+        >
           <LoginForm />
           <LocationProbe />
         </AuthContext.Provider>
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Work Email'), 'employee@company.com')
+    await user.type(screen.getByLabelText('Email or mobile number'), 'employee@company.com')
     await user.click(screen.getByRole('button', { name: /send otp/i }))
 
     await waitFor(() => expect(screen.getByLabelText('Enter OTP (4 Digit)')).toBeInTheDocument())
@@ -282,11 +359,17 @@ describe('authentication portal flow', () => {
 
   it('persists the admin identity and clears it on logout', async () => {
     const user = userEvent.setup()
-    render(<AuthProvider><AuthControls /></AuthProvider>)
+    render(
+      <AuthProvider>
+        <AuthControls />
+      </AuthProvider>,
+    )
 
     await user.click(screen.getByRole('button', { name: 'Accept session' }))
     await waitFor(() => expect(window.localStorage.getItem('hrm.auth.session')).not.toBeNull())
-    expect(JSON.parse(window.localStorage.getItem('hrm.auth.session')!).user.id).toBe(adminSession.user.id)
+    expect(JSON.parse(window.localStorage.getItem('hrm.auth.session')!).user.id).toBe(
+      adminSession.user.id,
+    )
     expect(window.localStorage.getItem('hrm.portal')).toBe('admin')
 
     await user.click(screen.getByRole('button', { name: 'Open employee portal' }))

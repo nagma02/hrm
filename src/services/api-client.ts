@@ -259,6 +259,9 @@ async function request<TData, TBody = unknown>(
   const { body, method = 'GET' } = options
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const configuredBase = appEnv.apiBaseUrl.replace(/\/+$/, '')
+  if (appEnv.env === 'development' || appEnv.env === 'test') {
+    return demoFallbackFor(normalizedPath, method.toUpperCase(), body) as ApiSuccessResponse<TData>
+  }
   const apiPath = normalizedPath.startsWith('/api/') ? normalizedPath : `/api${normalizedPath}`
   const url = configuredBase
     ? `${configuredBase.endsWith('/api') && apiPath.startsWith('/api/') ? configuredBase.slice(0, -4) : configuredBase}${apiPath}`

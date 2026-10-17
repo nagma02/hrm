@@ -1040,7 +1040,36 @@ a { color: inherit; text-decoration: none; }
 .login-phone-delivery__button.button--primary { border-color: #075e55; background: #075e55; color: #fff; }
 .login-phone-delivery__button:disabled { opacity: .5; cursor: not-allowed; }
 .login-phone-delivery > p { margin: 0; color: #849088; font-size: 10px; line-height: 1.45; text-align: center; }
-.login-demo-otp-toast { padding: 12px 14px; border: 1px solid #86efac; border-radius: 10px; background: #ecfdf5; color: #047857; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 14px rgb(16 185 129 / 10%); }
+.login-demo-otp-toast { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--color-primary) 24%, white); border-radius: 10px; background: color-mix(in srgb, var(--color-primary) 7%, white); color: var(--color-primary-deep); font-size: 13px; line-height: 1.5; }
+.login-demo-otp-toast strong { font-size: 20px; letter-spacing: .2em; }
+.login-demo-otp-toast small { grid-column: 1 / -1; color: var(--color-muted); font-size: 11px; }
+
+/* Keep the login screen aligned with the shared blue and teal application theme. */
+.auth-screen { background: radial-gradient(ellipse at 12% 10%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 34%), linear-gradient(180deg, var(--color-surface-soft) 0%, var(--color-bg) 100%); }
+.login-brand-panel { background: linear-gradient(145deg, var(--color-primary-deep) 0%, #1b5363 55%, var(--color-primary-strong) 100%); }
+.login-footer__brand, .login-footer__mark svg, .login-footer__mark b, .login-footer__policies, .auth-screen__eyebrow { color: var(--color-primary-strong); }
+.login-mode-toggle button.is-active, .login-change-email, .login-resend-otp, .login-consent a, .login-options a { color: var(--color-primary-strong); }
+.login-change-email:hover, .login-resend-otp:not(:disabled):hover, .login-options a:hover { color: var(--color-primary-deep); }
+.login-consent-checkbox input { accent-color: var(--color-primary); }
+.login-input-wrap:focus-within, .login-otp-digit:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 16%, transparent); }
+.login-submit.button--primary, .login-phone-delivery__button.button--primary { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-primary-foreground); }
+.login-submit.button--primary:hover, .login-phone-delivery__button.button--primary:hover { border-color: var(--color-primary-strong); background: var(--color-primary-strong); }
+.login-phone-delivery__button { border-color: var(--color-border); color: var(--color-primary-deep); }
+.auth-screen { padding: clamp(18px, 4vw, 52px); }
+.auth-layout { width: min(1240px, 100%); min-height: min(740px, calc(100vh - 72px)); grid-template-columns: 1fr .94fr; border-color: color-mix(in srgb, var(--color-primary-deep) 14%, white); border-radius: 26px; box-shadow: 0 32px 90px color-mix(in srgb, var(--color-primary-deep) 16%, transparent), 0 5px 18px rgb(25 55 70 / 5%); }
+.login-brand-panel { background: radial-gradient(ellipse at 95% 5%, rgb(57 173 165 / 24%), transparent 38%), linear-gradient(145deg, var(--color-primary-deep), #1a5367 62%, #226f79); }
+.login-form-panel { background: linear-gradient(145deg, #fff 0%, color-mix(in srgb, var(--color-surface-soft) 38%, white) 100%); }
+.login-form-content { width: min(100%, 440px); padding: 28px clamp(22px, 3vw, 38px); border: 1px solid color-mix(in srgb, var(--color-primary-deep) 7%, white); border-radius: 20px; background: rgb(255 255 255 / 88%); box-shadow: 0 16px 42px rgb(22 60 76 / 7%); }
+.login-upgrate-logo { width: min(76%, 280px); margin-bottom: 26px; }
+.auth-screen__title { color: var(--color-text); font-size: clamp(27px, 2.2vw, 32px); letter-spacing: -1px; }
+.auth-screen__description { margin-bottom: 24px; color: var(--color-muted); }
+.login-mode-toggle { border-color: var(--color-border); background: color-mix(in srgb, var(--color-surface-soft) 55%, white); }
+.login-mode-toggle button.is-active { box-shadow: 0 2px 8px rgb(22 60 76 / 10%); }
+.login-input-wrap { border-color: var(--color-border); background: #fff; }
+.login-input-wrap:focus-within { background: #fff; }
+.login-submit.button--primary { min-height: 48px; border-radius: 10px; box-shadow: 0 7px 16px color-mix(in srgb, var(--color-primary) 22%, transparent); transition: background .15s, transform .15s, box-shadow .15s; }
+.login-submit.button--primary:hover { transform: translateY(-1px); box-shadow: 0 10px 20px color-mix(in srgb, var(--color-primary) 27%, transparent); }
+.login-security-note { color: var(--color-muted); }
 .login-phone-verify-heading h3 { margin: 0; color: #202923; font-size: 18px; font-weight: 700; line-height: 1.3; }
 .login-phone-verify-heading p { margin: 5px 0 0; color: #849088; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .login-error { display: flex; align-items: center; gap: 8px; margin: -4px 0 0; padding: 10px 11px; border: 1px solid #f1d4d1; border-radius: 8px; background: #fff7f6; color: #ad4d46; font-size: 13px; }
@@ -6611,4 +6640,308 @@ html.dark .profile-page .profile-permissions > div > span { border-color: #625f5
   .app-shell--employee-portal .employee-holiday-countdown { grid-column: 2 / -1; text-align: left; }
   .app-shell--employee-portal .employee-upcoming-holiday { grid-template-columns: 48px minmax(0, 1fr); }
   .app-shell--employee-portal .employee-upcoming-holiday > .status-pill { grid-column: 2; }
+}
+
+/* Consistent visual system across admin and employee workspaces. */
+html.light {
+  --color-bg: #f3f7fa;
+  --color-surface: #fff;
+  --color-surface-soft: #eaf3f7;
+  --color-muted: #647985;
+  --color-border: #dce7ed;
+  --color-text: #183746;
+  --color-primary: #35a9a4;
+  --color-primary-strong: #238b91;
+  --color-primary-deep: #123f51;
+  --focus-ring: #35a9a4;
+  --sidebar-bg: #123544;
+  --sidebar-hover: #1d4c5e;
+  --sidebar-active: #1b6573;
+  --shadow-sm: 0 4px 16px rgb(19 57 75 / 5%);
+  --shadow-md: 0 16px 36px rgb(19 57 75 / 9%);
+}
+body { background: var(--color-bg); color: var(--color-text); }
+.app-shell, .app-shell--employee-portal { background: var(--color-bg); }
+.sidebar { width: 268px; min-width: 268px; flex-basis: 268px; background: var(--sidebar-bg); box-shadow: 8px 0 28px rgb(12 45 60 / 8%); }
+.app-shell:has(.side-nav.is-collapsed) > .sidebar { width: 76px; min-width: 76px; flex-basis: 76px; }
+.side-nav { padding: 22px 13px 14px; }
+.brand { padding-bottom: 25px; }
+.brand-mark { border-radius: 12px; background: rgb(255 255 255 / 11%); }
+.nav-label { color: rgb(219 237 244 / 48%); font-size: 10px; letter-spacing: 1.1px; }
+.nav-item { min-height: 43px; border-radius: 11px; color: rgb(232 244 248 / 72%); font-size: 13px; }
+.nav-item.active, .nav-subitem.active { background: linear-gradient(100deg, rgb(53 169 164 / 28%), rgb(53 169 164 / 12%)); color: #fff; box-shadow: inset 3px 0 0 #63d2c5; }
+.nav-subitem { border-radius: 9px; font-size: 12px; }
+.header { position: sticky; top: 0; height: 72px; padding-inline: clamp(18px, 2.2vw, 34px); background: rgb(255 255 255 / 92%); box-shadow: 0 3px 14px rgb(19 57 75 / 3%); backdrop-filter: blur(14px); }
+.crumbs { color: #80939d; font-size: 12px; }
+.crumbs strong { color: #274958; font-weight: 650; }
+.topbar-right { gap: 10px; }
+.global-search { width: clamp(190px, 19vw, 280px); height: 38px; border-color: var(--color-border); border-radius: 11px; background: #f8fbfc; }
+.global-search:focus-within { border-color: var(--focus-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 14%, transparent); background: #fff; }
+.icon-button { width: 38px; height: 38px; border-color: transparent; border-radius: 11px; background: #f2f7f9; color: #536d79; }
+.icon-button:hover { border-color: var(--color-border); background: #e9f2f5; color: var(--color-primary-deep); }
+.profile-avatar { width: 36px; height: 36px; background: #dff1f1; color: #197a80; }
+.app-shell__content { padding: clamp(20px, 2.2vw, 34px) clamp(18px, 2.4vw, 38px) 52px; }
+.app-shell__content--employee-portal { max-width: none; padding: clamp(20px, 2.2vw, 34px) clamp(18px, 2.4vw, 38px) 52px; }
+.page-stack, .module-page { gap: 20px; }
+.page-header { align-items: flex-end; margin-bottom: 4px; }
+.page-header .section-title, .page-title { color: var(--color-text); font-size: clamp(25px, 2.1vw, 31px); font-weight: 700; letter-spacing: -.9px; }
+.page-header > div:first-child > div[style*='color: var(--color-muted)'] { margin-top: 7px !important; color: var(--color-muted); font-size: 13px; }
+.card, .panel, .stat-tile, .dashboard-visual-card, .employee-data-card, .employee-profile-section, .employee-settings-card, .employee-punch-card, .payroll-summary-card, .payroll-records-panel, .payroll-breakdown-panel, .payroll-info-panel, .payroll-report-panel, .leave-stat-card, .department-overview-card, .employee-dashboard-card, .employee-stat-card, .employee-attendance-stat, .employee-leave-balance-card, .employee-payroll-metric, .employee-payroll-summary, .employee-tax-year, .employee-document-note, .employee-announcement-card, .employee-upcoming-holiday {
+  border-color: var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.card, .employee-data-card { padding: 20px; }
+.card:hover, .panel:hover, .stat-tile:hover, .dashboard-visual-card:hover, .employee-data-card:hover, .employee-profile-section:hover, .employee-settings-card:hover, .employee-dashboard-card:hover, .employee-stat-card:hover, .employee-attendance-stat:hover, .employee-leave-balance-card:hover, .employee-payroll-metric:hover, .employee-payroll-summary:hover, .employee-tax-year:hover, .employee-document-note:hover, .employee-announcement-card:hover, .employee-upcoming-holiday:hover { border-color: #c8dce5; box-shadow: var(--shadow-md); }
+.employee-data-toolbar h2, .employee-announcement-header h2, .employee-profile-section > header h2 { color: var(--color-text); font-family: inherit; }
+.employee-upcoming-holiday h2, .employee-holiday-copy b, .employee-holiday-date strong { color: var(--color-text); }
+.employee-upcoming-holiday p, .employee-holiday-copy small, .employee-holiday-countdown { color: var(--color-muted); }
+.employee-holiday-date { border-color: var(--color-border); background: var(--color-surface-soft) !important; color: var(--color-primary-deep) !important; }
+.employee-holiday-date strong { color: var(--color-primary-deep); }
+.employee-holiday-row { border-color: var(--color-border); border-radius: 13px; background: var(--color-surface); }
+.employee-holiday-row:hover { border-color: #c8dce5; background: #f7fbfc; }
+.button, button.button { min-height: 40px; border-radius: 10px; font-weight: 600; transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease; }
+.button--primary, .header__primary-button { border-color: var(--color-primary-deep); background: var(--color-primary-deep); color: #fff; }
+.button--primary:hover, .header__primary-button:hover { border-color: #0e3444; background: #0e3444; box-shadow: 0 7px 16px rgb(18 63 81 / 17%); transform: translateY(-1px); }
+.button--secondary, .header__ghost-button { border-color: var(--color-border); background: #fff; color: var(--color-primary-deep); }
+.button--secondary:hover, .header__ghost-button:hover { border-color: #b9d3dc; background: #f4f9fb; }
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']), select, textarea { border-color: var(--color-border); border-radius: 9px; }
+input:focus, select:focus, textarea:focus { border-color: var(--focus-ring); outline-color: color-mix(in srgb, var(--focus-ring) 28%, transparent); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus-ring) 28%, transparent); }
+.table, .hr-table { border-collapse: separate; border-spacing: 0; }
+.table th, .hr-table th { background: #f5f9fb; color: #6d828d; font-size: 11px; letter-spacing: .45px; }
+.table td, .hr-table td { border-color: #e9f0f3; color: #435d69; }
+.table tbody tr:hover, .hr-table tbody tr:hover { background: #f7fbfc; }
+.panel-head { border-color: #e9f0f3; }
+.module-page .module-settings-layout, .settings-section, .settings-nav { border-color: var(--color-border); }
+.form-modal, .dialog__panel, .drawer { border-color: var(--color-border); border-radius: 18px; box-shadow: 0 26px 70px rgb(12 45 60 / 20%); }
+.status-badge, .status-pill { border-radius: 999px; }
+@media (max-width: 900px) {
+  .sidebar { width: 268px; min-width: 268px; flex-basis: 268px; }
+  .header { height: 64px; }
+  .app-shell__content, .app-shell__content--employee-portal { padding: 20px 18px 40px; }
+}
+@media (max-width: 640px) {
+  .header { padding-inline: 12px; }
+  .topbar { gap: 8px; }
+  .crumbs { display: none; }
+  .global-search { width: min(42vw, 220px); }
+  .app-shell__content, .app-shell__content--employee-portal { padding: 16px 12px 32px; }
+  .page-header { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .page-header > div:last-child, .page-header > div:last-child > div { width: 100%; flex-wrap: wrap; }
+  .page-header .section-title, .page-title { font-size: 25px; }
+  .card, .employee-data-card { padding: 15px; }
+}
+
+/* Mirror the employee portal's warm charcoal and ivory palette in the admin portal. */
+html.light .app-shell:not(.app-shell--employee-portal) {
+  --color-bg: #f6f6f2;
+  --color-surface: #fffefa;
+  --color-surface-soft: #eeeee5;
+  --color-muted: #817d70;
+  --color-border: #dedbcf;
+  --color-text: #38372f;
+  --color-primary: #71866f;
+  --color-primary-strong: #5c705b;
+  --color-primary-deep: #45433c;
+  --focus-ring: #8b9a7c;
+  --sidebar-bg: #45433c;
+  --sidebar-hover: #5b594f;
+  --sidebar-active: #666458;
+  --portal-accent: #5c705b;
+  --portal-accent-soft: #eeeee5;
+  --portal-ink: #38372f;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+html.light .app-shell:not(.app-shell--employee-portal) .sidebar {
+  border-right-color: rgb(255 254 250 / 8%);
+  background: radial-gradient(ellipse at 0 0, rgb(189 183 151 / 13%), transparent 18rem), linear-gradient(180deg, #45433c 0%, #393832 100%);
+}
+html.light .app-shell:not(.app-shell--employee-portal) .brand-mark {
+  border-color: #dedccf;
+  background: #eeeee5;
+  color: #45433c;
+}
+html.light .app-shell:not(.app-shell--employee-portal) .brand-copy small,
+html.light .app-shell:not(.app-shell--employee-portal) .nav-label { color: #c3c0ae; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-item { color: #e1dfd4; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-item svg { color: #c9c7b8; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-item:hover { background: #5b594f; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-item.active {
+  background: #eeeee5;
+  box-shadow: inset 3px 0 #9bad91, 0 4px 12px rgb(0 0 0 / 10%);
+  color: #45433c;
+}
+html.light .app-shell:not(.app-shell--employee-portal) .nav-item.active svg { color: #59574c; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-subitem { color: #ceccbf; }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-subitem:hover { background: rgb(255 254 250 / 10%); }
+html.light .app-shell:not(.app-shell--employee-portal) .nav-subitem.active { background: rgb(219 220 199 / 15%); color: #fffefa; }
+html.light .app-shell:not(.app-shell--employee-portal) .sidebar-bottom { border-top-color: rgb(231 228 211 / 15%); }
+html.light .app-shell:not(.app-shell--employee-portal) .sidebar-footnote,
+html.light .app-shell:not(.app-shell--employee-portal) .collapse-button { color: #c0beaf; }
+html.light .app-shell:not(.app-shell--employee-portal) .header { border-bottom-color: #e4e1d7; background: rgb(255 254 250 / 96%); }
+html.light .app-shell:not(.app-shell--employee-portal) .crumbs strong,
+html.light .app-shell:not(.app-shell--employee-portal) .page-header .section-title,
+html.light .app-shell:not(.app-shell--employee-portal) .page-title { color: #38372f; }
+html.light .app-shell:not(.app-shell--employee-portal) .global-search,
+html.light .app-shell:not(.app-shell--employee-portal) .icon-button,
+html.light .app-shell:not(.app-shell--employee-portal) .organization-switcher { border-color: #dedbcf; background: #fffefa; }
+html.light .app-shell:not(.app-shell--employee-portal) .card,
+html.light .app-shell:not(.app-shell--employee-portal) .panel,
+html.light .app-shell:not(.app-shell--employee-portal) .stat-tile,
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card,
+html.light .app-shell:not(.app-shell--employee-portal) .payroll-summary-card,
+html.light .app-shell:not(.app-shell--employee-portal) .payroll-records-panel,
+html.light .app-shell:not(.app-shell--employee-portal) .payroll-breakdown-panel,
+html.light .app-shell:not(.app-shell--employee-portal) .payroll-info-panel,
+html.light .app-shell:not(.app-shell--employee-portal) .payroll-report-panel,
+html.light .app-shell:not(.app-shell--employee-portal) .leave-stat-card,
+html.light .app-shell:not(.app-shell--employee-portal) .department-overview-card,
+html.light .app-shell:not(.app-shell--employee-portal) .employee-stat-card {
+  border-color: #dedbcf;
+  background: #fffefa;
+  box-shadow: 0 5px 15px rgb(69 67 60 / 5%);
+}
+html.light .app-shell:not(.app-shell--employee-portal) .card:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .panel:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .stat-tile:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card:hover { border-color: #c8c4b5; }
+html.light .app-shell:not(.app-shell--employee-portal) .section-title,
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card h2,
+html.light .app-shell:not(.app-shell--employee-portal) .panel-head h2 { color: #38372f; }
+html.light .app-shell:not(.app-shell--employee-portal) .button--primary,
+html.light .app-shell:not(.app-shell--employee-portal) .header__primary-button,
+html.light .app-shell:not(.app-shell--employee-portal) .button.primary {
+  border-color: #45433c;
+  background: #45433c;
+  color: #fffefa;
+}
+html.light .app-shell:not(.app-shell--employee-portal) .button--primary:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .header__primary-button:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .button.primary:hover { border-color: #625f53; background: #625f53; }
+html.light .app-shell:not(.app-shell--employee-portal) .hr-table th,
+html.light .app-shell:not(.app-shell--employee-portal) .table th { background: #f1f0e8; color: #746f62; }
+html.light .app-shell:not(.app-shell--employee-portal) .hr-table td,
+html.light .app-shell:not(.app-shell--employee-portal) .table td { border-color: #ece9df; color: #57554b; }
+html.light .app-shell:not(.app-shell--employee-portal) .hr-table tbody tr:hover,
+html.light .app-shell:not(.app-shell--employee-portal) .table tbody tr:hover { background: #f8f7f2; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-page { gap: 20px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-header {
+  align-items: center;
+  min-height: 118px;
+  padding: 20px 24px;
+  border: 1px solid #dedbcf;
+  border-radius: 17px;
+  background: linear-gradient(110deg, #fffefa 0%, #f6f4eb 100%);
+  box-shadow: 0 5px 15px rgb(69 67 60 / 4%);
+}
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-header .eyebrow {
+  display: inline-flex;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid #e5e2d6;
+  border-radius: 999px;
+  background: #f1f0e8;
+  color: #777766;
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-header .section-title { margin-top: 10px; font-size: clamp(25px, 2.2vw, 32px); }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-header > div:first-child > div:last-child { color: #817d70 !important; font-size: 13px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-actions { gap: 9px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-search { height: 40px; border-color: #dedbcf; border-radius: 10px; background: #fffefa; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-grid { gap: 13px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-grid .stat-card {
+  min-height: 122px;
+  padding: 17px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fffefa, #f9f8f1);
+  box-shadow: 0 5px 15px rgb(69 67 60 / 5%);
+}
+html.light .app-shell:not(.app-shell--employee-portal) .stat-card__label { color: #817d70; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+html.light .app-shell:not(.app-shell--employee-portal) .stat-card__value { margin-top: 8px; color: #38372f; font-size: 28px; font-variant-numeric: tabular-nums; }
+html.light .app-shell:not(.app-shell--employee-portal) .stat-card__icon { border-radius: 10px; background: #eeeee5; color: #687b65; }
+html.light .app-shell:not(.app-shell--employee-portal) .stat-card__change.is-positive { color: #71866f; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-grid,
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-pair { gap: 15px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card { min-height: 310px; padding: 21px; border-radius: 15px; }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card::before { background: linear-gradient(90deg, transparent, #a5ad91 22%, #6f8170 50%, #c9bea0 80%, transparent); }
+html.light .app-shell:not(.app-shell--employee-portal) .dashboard-visual-card h2,
+html.light .app-shell:not(.app-shell--employee-portal) .chart-heading .section-title { font-size: 19px; }
+@media (min-width: 1200px) {
+  html.light .app-shell:not(.app-shell--employee-portal) .dashboard-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  html.light .app-shell:not(.app-shell--employee-portal) .dashboard-header { align-items: flex-start; padding: 17px; }
+  html.light .app-shell:not(.app-shell--employee-portal) .dashboard-actions { justify-content: flex-start; }
+}
+
+/* Carry the same warm charcoal and ivory palette onto authentication pages. */
+html.light .auth-screen {
+  --color-bg: #f6f6f2;
+  --color-surface: #fffefa;
+  --color-surface-soft: #eeeee5;
+  --color-muted: #817d70;
+  --color-border: #dedbcf;
+  --color-text: #38372f;
+  --color-primary: #71866f;
+  --color-primary-strong: #5c705b;
+  --color-primary-deep: #45433c;
+  --focus-ring: #8b9a7c;
+  background: radial-gradient(ellipse at 10% 10%, rgb(189 183 151 / 15%), transparent 35%), linear-gradient(180deg, #f1f0e8 0%, #f6f6f2 100%);
+}
+html.light .auth-layout {
+  border-color: #dedbcf;
+  background: #fffefa;
+  box-shadow: 0 28px 76px rgb(69 67 60 / 13%), 0 3px 10px rgb(69 67 60 / 5%);
+}
+html.light .login-brand-panel {
+  background: radial-gradient(ellipse at 90% 5%, rgb(189 183 151 / 17%), transparent 36%), linear-gradient(150deg, #45433c 0%, #4d4b42 55%, #393832 100%);
+}
+html.light .login-brand-glow { border-color: rgb(255 254 250 / 10%); }
+html.light .login-brand-glow::before, html.light .login-brand-glow::after { border-color: rgb(255 254 250 / 7%); }
+html.light .login-brand-kicker { color: #d6d2bd; }
+html.light .login-brand-copy p { color: rgb(255 254 250 / 76%); }
+html.light .login-feature-list li { color: rgb(255 254 250 / 88%); }
+html.light .login-feature-list li span { border-color: rgb(255 254 250 / 17%); background: rgb(255 254 250 / 9%); color: #e1dfd4; }
+html.light .login-insight-card { border-color: rgb(255 254 250 / 20%); background: rgb(255 254 250 / 10%); }
+html.light .login-insight-icon { background: rgb(255 254 250 / 13%); color: #e1dfd4; }
+html.light .login-insight-bars i:nth-child(4), html.light .login-insight-bars i:nth-child(6) { background: #c7d0af; }
+html.light .login-insight-foot i { background: #c7d0af; }
+html.light .login-insight-foot b { color: #dedccf; }
+html.light .login-form-panel { background: linear-gradient(145deg, #fffefa 0%, #f5f4ed 100%); }
+html.light .login-form-content { border-color: #e5e2d7; background: rgb(255 254 250 / 95%); box-shadow: 0 16px 42px rgb(69 67 60 / 7%); }
+html.light .auth-screen__eyebrow,
+html.light .login-footer__brand,
+html.light .login-footer__mark svg,
+html.light .login-footer__mark b,
+html.light .login-footer__policies,
+html.light .login-mode-toggle button.is-active,
+html.light .login-change-email,
+html.light .login-resend-otp,
+html.light .login-consent a { color: #687b65; }
+html.light .auth-screen__title { color: #38372f; }
+html.light .auth-screen__description,
+html.light .login-security-note { color: #817d70; }
+html.light .login-mode-toggle { border-color: #dedbcf; background: #f1f0e8; }
+html.light .login-mode-toggle button.is-active { background: #fffefa; box-shadow: 0 2px 7px rgb(69 67 60 / 9%); }
+html.light .login-input-wrap { border-color: #dedbcf; background: #fffefa; }
+html.light .login-input-wrap:focus-within,
+html.light .login-otp-digit:focus { border-color: #8b9a7c; background: #fffefa; box-shadow: 0 0 0 3px rgb(139 154 124 / 17%); }
+html.light .login-submit.button--primary,
+html.light .login-phone-delivery__button.button--primary { border-color: #45433c; background: #45433c; color: #fffefa; box-shadow: 0 7px 16px rgb(69 67 60 / 17%); }
+html.light .login-submit.button--primary:hover,
+html.light .login-phone-delivery__button.button--primary:hover { border-color: #625f53; background: #625f53; }
+html.light .login-phone-delivery__button { border-color: #dedbcf; color: #45433c; }
+html.light .login-demo-otp-toast { border-color: #dedbcf; background: #f1f0e8; color: #45433c; }
+html.light .login-country-code {
+  flex: 0 0 auto;
+  padding-right: 11px;
+  border-right: 1px solid #dedbcf;
+  color: #45433c;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
 }

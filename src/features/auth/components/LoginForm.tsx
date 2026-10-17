@@ -3,12 +3,19 @@ import { ArrowRight, Mail, ShieldCheck } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import { toast } from 'sonner'
+import { getPortalLandingPath } from '@/app/auth/access'
 import { authSchema } from '@/schemas/auth.schema'
 import { useAuth } from '@/app/providers/use-auth'
 import { LoginFooter } from '@/features/auth/components/LoginFooter'
-import { normalizePhoneNumber } from '@/services/auth.service'
-import { postApi } from '@/services/api'
-import type { AuthSession } from '@/types/auth'
+import {
+  normalizePhoneNumber,
+  requestLoginOtp,
+  requestPhoneLoginOtp,
+  resendLoginOtp,
+  resendPhoneLoginOtp,
+  verifyLoginOtp,
+  verifyPhoneLoginOtp,
+} from '@/services/auth.service'
 
 type LoginMode = 'email' | 'phone'
 type OtpChannel = 'email' | 'sms' | 'whatsapp'
@@ -23,6 +30,7 @@ type PersistedLoginState = {
     authError: string
   }
   otpSent: boolean
+  devOtp: string
   otpChannel: OtpChannel
   otpStatus: string
   resendCountdown: number
@@ -36,6 +44,18 @@ const emptyFormState = {
   otp: '',
   identifierError: '',
   authError: '',
+}
+
+function detectLoginMode(value: string): LoginMode {
+  if (!value.trim()) return 'email'
+  return /[a-z@]/i.test(value) ? 'email' : 'phone'
+}
+
+function stripIndiaDialCode(value: string) {
+  return value
+    .replace(/^\s*\+91(?:\s*)/, '')
+    .replace(/^\s*91\s+/, '')
+    .trimStart()
 }
 
 function readPersistedLoginState(): PersistedLoginState | null {
@@ -66,8 +86,17 @@ export function LoginForm() {
   const navigate = useNavigate()
   const persistedState = readPersistedLoginState()
   const [loginMode, setLoginMode] = useState<LoginMode>(persistedState?.loginMode ?? 'email')
-  const [form, setForm] = useState({ ...emptyFormState, ...(persistedState?.form ?? {}) })
+  const [form, setForm] = useState(() => {
+    const persisted = persistedState?.form ?? emptyFormState
+    return {
+      ...emptyFormState,
+      ...persisted,
+      phone: stripIndiaDialCode(persisted.phone ?? ''),
+      authError: '',
+    }
+  })
   const [otpSent, setOtpSent] = useState(persistedState?.otpSent ?? false)
+  const [devOtp, setDevOtp] = useState(persistedState?.devOtp ?? '')
   const [otpChannel, setOtpChannel] = useState<OtpChannel>(persistedState?.otpChannel ?? 'email')
   const [sendingChannel, setSendingChannel] = useState<OtpChannel | null>(null)
   const [otpStatus, setOtpStatus] = useState(persistedState?.otpStatus ?? '')
@@ -117,7 +146,10 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!otpSent || resendCountdown === 0) return
-    const timer = window.setInterval(() => setResendCountdown((remaining) => Math.max(0, remaining - 1)), 1000)
+    const timer = window.setInterval(
+      () => setResendCountdown((remaining) => Math.max(0, remaining - 1)),
+      1000,
+    )
     return () => window.clearInterval(timer)
   }, [otpSent, resendCountdown])
 
@@ -128,15 +160,16 @@ export function LoginForm() {
 
     const nextState: PersistedLoginState = {
       loginMode,
-      form,
+      form: { ...form, authError: '' },
       otpSent,
+      devOtp,
       otpChannel,
       otpStatus,
       resendCountdown,
     }
 
     window.sessionStorage.setItem(LOGIN_FORM_STORAGE_KEY, JSON.stringify(nextState))
-  }, [form, loginMode, otpChannel, otpSent, otpStatus, resendCountdown])
+  }, [devOtp, form, loginMode, otpChannel, otpSent, otpStatus, resendCountdown])
 
   const sendOtp = async (channel: OtpChannel = loginMode === 'email' ? 'email' : 'sms') => {
     setForm((current) => ({ ...current, identifierError: '', authError: '' }))
@@ -152,7 +185,11 @@ export function LoginForm() {
     } else {
       recipient = normalizePhoneNumber(form.phone)
       if (!recipient) {
-        setForm((current) => ({ ...current, identifierError: 'Enter a valid 10-digit mobile number, including its country code if needed.' }))
+        setForm((current) => ({
+          ...current,
+          identifierError:
+            'Enter a valid 10-digit mobile number, including its country code if needed.',
+        }))
         return
       }
     }
@@ -160,22 +197,25 @@ export function LoginForm() {
     setSendingChannel(channel)
     try {
       if (channel === 'email') {
-        await postApi('/api/auth/send-otp-email', { email: recipient })
+        const result = await requestLoginOtp(recipient)
+        setDevOtp(result.devOtp)
         setForm((current) => ({ ...current, email: recipient }))
       } else {
-        const path = channel === 'sms' ? '/api/auth/send-otp-sms' : '/api/auth/send-otp-whatsapp'
-        await postApi(path, { mobile: recipient })
-        setForm((current) => ({ ...current, phone: recipient }))
+        const result = await requestPhoneLoginOtp(recipient)
+        setDevOtp(result.devOtp)
+        setForm((current) => ({ ...current, phone: stripIndiaDialCode(recipient) }))
       }
       setForm((current) => ({ ...current, otp: '' }))
       setOtpChannel(channel)
       setOtpSent(true)
-      const channelLabel = channel === 'email' ? 'email' : channel === 'sms' ? 'mobile by SMS' : 'mobile by WhatsApp'
+      const channelLabel =
+        channel === 'email' ? 'email' : channel === 'sms' ? 'mobile by SMS' : 'mobile by WhatsApp'
       setOtpStatus(`If your account is registered, an OTP has been sent to your ${channelLabel}.`)
       toast.success(`OTP sent to your ${channelLabel}.`)
       setResendCountdown(30)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to start sign in. Please try again.'
+      const message =
+        error instanceof Error ? error.message : 'Unable to start sign in. Please try again.'
       setForm((current) => ({ ...current, authError: message }))
       toast.error(message)
     } finally {
@@ -188,18 +228,24 @@ export function LoginForm() {
     setForm((current) => ({ ...current, authError: '' }))
     setIsResending(true)
     try {
-      const identifier = otpChannel === 'email' ? form.email : form.phone
-      const path = otpChannel === 'email'
-        ? '/api/auth/send-otp-email'
-        : otpChannel === 'sms' ? '/api/auth/send-otp-sms' : '/api/auth/send-otp-whatsapp'
-      await postApi(path, otpChannel === 'email' ? { email: identifier } : { mobile: identifier })
+      const code =
+        otpChannel === 'email'
+          ? await resendLoginOtp(form.email)
+          : await resendPhoneLoginOtp(form.phone)
+      setDevOtp(code)
       setForm((current) => ({ ...current, otp: '' }))
-      const channelLabel = otpChannel === 'email' ? 'email' : otpChannel === 'sms' ? 'mobile by SMS' : 'mobile by WhatsApp'
+      const channelLabel =
+        otpChannel === 'email'
+          ? 'email'
+          : otpChannel === 'sms'
+            ? 'mobile by SMS'
+            : 'mobile by WhatsApp'
       setOtpStatus(`If your account is registered, an OTP has been sent to your ${channelLabel}.`)
       toast.success(`OTP sent to your ${channelLabel}.`)
       setResendCountdown(30)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to resend OTP. Please try again.'
+      const message =
+        error instanceof Error ? error.message : 'Unable to resend OTP. Please try again.'
       setForm((current) => ({ ...current, authError: message }))
       toast.error(message)
     } finally {
@@ -209,7 +255,13 @@ export function LoginForm() {
 
   const changeCredentials = () => {
     setOtpSent(false)
-    setForm((current) => ({ ...current, otp: '', authError: '' }))
+    setDevOtp('')
+    setForm((current) => ({
+      ...current,
+      otp: '',
+      authError: '',
+      phone: stripIndiaDialCode(current.phone),
+    }))
     setOtpStatus('')
     setResendCountdown(0)
   }
@@ -222,9 +274,12 @@ export function LoginForm() {
     event.preventDefault()
     if (!otpSent) {
       if (loginMode === 'phone') {
-        setForm((current) => ({ ...current, authError: form.phone.trim()
-          ? 'Choose SMS or WhatsApp to continue.'
-          : 'Enter a valid 10-digit mobile number, including its country code if needed.' }))
+        setForm((current) => ({
+          ...current,
+          authError: form.phone.trim()
+            ? 'Choose SMS or WhatsApp to continue.'
+            : 'Enter a valid 10-digit mobile number, including its country code if needed.',
+        }))
         return
       }
       await sendOtp()
@@ -233,25 +288,28 @@ export function LoginForm() {
 
     setForm((current) => ({ ...current, authError: '' }))
     if (!/^\d{4}$/.test(form.otp)) {
-      setForm((current) => ({ ...current, authError: `Enter the 4-digit OTP sent to your ${loginMode === 'email' ? 'email' : 'mobile number'}.` }))
+      setForm((current) => ({
+        ...current,
+        authError: `Enter the 4-digit OTP sent to your ${loginMode === 'email' ? 'email' : 'mobile number'}.`,
+      }))
       return
     }
     setIsSubmitting(true)
     try {
-      const identifier = loginMode === 'email' ? form.email : form.phone
-      const { session, redirectTo } = await postApi<{ session: AuthSession; redirectTo: string }>(
-        '/api/auth/verify-otp',
-        { identifier, otp: form.otp },
-      )
+      const session =
+        loginMode === 'email'
+          ? await verifyLoginOtp(form.email, form.otp)
+          : await verifyPhoneLoginOtp(form.phone, form.otp)
       acceptSession(session)
       clearLoginFormOnSuccess()
-      const destination = redirectTo
+      const destination = getPortalLandingPath(session.user)
       navigate(destination, { replace: true })
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', destination)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to verify OTP. Please try again.'
+      const message =
+        error instanceof Error ? error.message : 'Unable to verify OTP. Please try again.'
       setForm((current) => ({ ...current, authError: message }))
       toast.error(message)
     } finally {
@@ -261,57 +319,112 @@ export function LoginForm() {
 
   return (
     <div className="login-form-column">
-      <section className="login-form-panel !min-h-[520px] !flex !flex-col !justify-between transition-all duration-300 ease-in-out" aria-labelledby="login-title">
+      <section
+        className="login-form-panel !min-h-[520px] !flex !flex-col !justify-between transition-all duration-300 ease-in-out"
+        aria-labelledby="login-title"
+      >
         <div className="login-form-content">
           <img className="login-upgrate-logo" src="/logo.png" alt="Upgrate" />
           <div className="auth-screen__eyebrow">Welcome back</div>
-          <h2 id="login-title" className="auth-screen__title">Sign in to your account</h2>
-          <p className="auth-screen__description">{otpSent ? `Enter the one-time password sent to your ${loginMode === 'email' ? 'work email' : 'mobile number'}.` : 'Sign in securely with a one-time password.'}</p>
+          <h2 id="login-title" className="auth-screen__title">
+            Sign in to your account
+          </h2>
+          <p className="auth-screen__description">
+            {otpSent
+              ? `Enter the one-time password sent to your ${loginMode === 'email' ? 'work email' : 'mobile number'}.`
+              : 'Sign in securely with a one-time password.'}
+          </p>
 
           <form className="login-form" onSubmit={onSubmit} noValidate>
-            {!otpSent && (
-              <div className="login-mode-toggle" role="tablist" aria-label="Choose sign-in method">
-                <button type="button" role="tab" aria-selected={loginMode === 'email'} className={loginMode === 'email' ? 'is-active' : ''} onClick={() => { setLoginMode('email'); setForm((current) => ({ ...current, identifierError: '', authError: '' })) }}><Mail size={15}/> Email</button>
-                <button type="button" role="tab" aria-selected={loginMode === 'phone'} className={loginMode === 'phone' ? 'is-active' : ''} onClick={() => { setLoginMode('phone'); setForm((current) => ({ ...current, identifierError: '', authError: '' })) }}><ShieldCheck size={15}/> Mobile Number</button>
-              </div>
-            )}
             <div className="login-field">
               <div className="login-field-heading">
-                <label htmlFor="login-identifier">{loginMode === 'email' ? 'Work Email' : 'Work Mobile Number'}</label>
-                {otpSent && <button type="button" className="login-change-email" onClick={changeCredentials}>Change</button>}
+                <label htmlFor="login-identifier">Email or mobile number</label>
+                {otpSent && (
+                  <button type="button" className="login-change-email" onClick={changeCredentials}>
+                    Change
+                  </button>
+                )}
               </div>
-              <div className={`login-input-wrap ${form.identifierError ? 'has-error' : ''}`}>
-                {loginMode === 'email' ? <Mail size={17} aria-hidden="true" /> : <ShieldCheck size={17} aria-hidden="true" />}
+              <div
+                className={`login-input-wrap ${loginMode === 'phone' ? 'login-input-wrap--phone' : ''} ${form.identifierError ? 'has-error' : ''}`}
+              >
+                {loginMode === 'email' ? (
+                  <Mail size={17} aria-hidden="true" />
+                ) : (
+                  <ShieldCheck size={17} aria-hidden="true" />
+                )}
+                {loginMode === 'phone' && (
+                  <span className="login-country-code" aria-hidden="true">
+                    +91
+                  </span>
+                )}
                 <input
                   id="login-identifier"
                   type={loginMode === 'email' ? 'email' : 'tel'}
                   inputMode={loginMode === 'phone' ? 'tel' : undefined}
                   autoComplete={loginMode === 'email' ? 'email' : 'tel'}
-                  placeholder={loginMode === 'email' ? 'you@company.com' : '+91 98765 43210'}
-                  value={loginMode === 'email' ? form.email : form.phone}
+                  placeholder={
+                    loginMode === 'email' ? 'you@company.com or mobile number' : '98765 43210'
+                  }
+                  value={loginMode === 'email' ? form.email : stripIndiaDialCode(form.phone)}
                   onChange={(event) => {
-                    setForm((current) => ({ ...current, [loginMode]: event.target.value, identifierError: '' }))
+                    const value = event.target.value
+                    const nextMode = detectLoginMode(value)
+                    setLoginMode(nextMode)
+                    setForm((current) => ({
+                      ...current,
+                      [nextMode]: value,
+                      identifierError: '',
+                      authError: '',
+                    }))
                   }}
                   disabled={otpSent}
                   aria-invalid={Boolean(form.identifierError)}
                   aria-describedby={form.identifierError ? 'login-identifier-error' : undefined}
                 />
               </div>
-              {form.identifierError && <span id="login-identifier-error" className="field-error" role="alert">{form.identifierError}</span>}
+              {form.identifierError && (
+                <span id="login-identifier-error" className="field-error" role="alert">
+                  {form.identifierError}
+                </span>
+              )}
             </div>
 
-            {otpStatus && <p className="login-otp-status" role="status">{otpStatus}</p>}
+            {otpStatus && (
+              <p className="login-otp-status" role="status">
+                {otpStatus}
+              </p>
+            )}
+            {otpSent && devOtp && (
+              <div className="login-demo-otp-toast" role="status">
+                <span>Template OTP</span>
+                <strong>{devOtp}</strong>
+                <small>Login ke liye neeche yahi code enter karein.</small>
+              </div>
+            )}
 
             {otpSent && (
               <div className="login-field login-otp-field">
-                {loginMode === 'phone' && <div className="login-phone-verify-heading">
-                  <h3>Verify One-Time Password</h3>
-                  <p>Enter the 4-digit code sent by {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to {form.phone}.</p>
-                </div>}
+                {loginMode === 'phone' && (
+                  <div className="login-phone-verify-heading">
+                    <h3>Verify One-Time Password</h3>
+                    <p>
+                      Enter the 4-digit code sent by{' '}
+                      {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to {form.phone}.
+                    </p>
+                  </div>
+                )}
                 <div className="login-field-heading">
                   <label htmlFor="login-otp">Enter OTP (4 Digit)</label>
-                  <button className="login-resend-otp" type="button" onClick={() => void resendOtp()} disabled={resendCountdown > 0 || isResending || isSubmitting}>
-                    {resendCountdown > 0 ? `Resend OTP in 00:${String(resendCountdown).padStart(2, '0')}` : 'Resend OTP'}
+                  <button
+                    className="login-resend-otp"
+                    type="button"
+                    onClick={() => void resendOtp()}
+                    disabled={resendCountdown > 0 || isResending || isSubmitting}
+                  >
+                    {resendCountdown > 0
+                      ? `Resend OTP in 00:${String(resendCountdown).padStart(2, '0')}`
+                      : 'Resend OTP'}
                   </button>
                 </div>
                 <input
@@ -327,13 +440,15 @@ export function LoginForm() {
                   {Array.from({ length: 4 }, (_, index) => (
                     <input
                       key={index}
-                      ref={(element) => { otpInputRefs.current[index] = element }}
+                      ref={(element) => {
+                        otpInputRefs.current[index] = element
+                      }}
                       type="text"
                       inputMode="numeric"
                       autoComplete="one-time-code"
                       value={form.otp[index] ?? ''}
                       maxLength={1}
-                      autoFocus={loginMode === 'phone' && otpSent && index === 0}
+                      autoFocus={otpSent && index === 0}
                       onChange={(event) => handleOtpDigitChange(index, event.target.value)}
                       onKeyDown={(event) => handleOtpKeyDown(event, index)}
                       onPaste={handleOtpPaste}
@@ -345,7 +460,9 @@ export function LoginForm() {
                   ))}
                 </div>
                 <span id="login-otp-hint" className="login-otp-hint">
-                  {loginMode === 'email' ? 'Enter the 4-digit code from your work email.' : `Enter the 4-digit code sent by ${otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
+                  {loginMode === 'email'
+                    ? 'Enter the 4-digit code from your work email.'
+                    : `Enter the 4-digit code sent by ${otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
                 </span>
               </div>
             )}
@@ -353,34 +470,84 @@ export function LoginForm() {
             {otpSent && (
               <div className="login-consent-block">
                 <p className="login-consent">
-                  By signing up, you agree to our{' '}
-                  <Link to="/terms-of-use">Terms of Use</Link>
-                  {' '}and{' '}
+                  By signing up, you agree to our <Link to="/terms-of-use">Terms of Use</Link> and{' '}
                   <Link to="/privacy-policy">Privacy Policy</Link>.
                 </p>
               </div>
             )}
 
-            {form.authError && <p className="login-error" role="alert"><ShieldCheck size={16}/>{form.authError}</p>}
-            {!otpSent && loginMode === 'phone' ? (form.phone.trim() ? (
-              <div className="login-phone-delivery">
-                <div className="login-phone-delivery__buttons">
-                  <button type="button" className="button login-phone-delivery__button" onClick={() => void sendOtp('sms')} disabled={!normalizePhoneNumber(form.phone) || isSubmitting || isResending}>
-                    {sendingChannel === 'sms' ? <><span className="login-spinner"/> Sending OTP…</> : 'Send via SMS'}
-                  </button>
-                  <button type="button" className="button button--primary login-phone-delivery__button" onClick={() => void sendOtp('whatsapp')} disabled={!normalizePhoneNumber(form.phone) || isSubmitting || isResending}>
-                    {sendingChannel === 'whatsapp' ? <><span className="login-spinner"/> Sending OTP…</> : 'WhatsApp'}
-                  </button>
+            {form.authError && (
+              <p className="login-error" role="alert">
+                <ShieldCheck size={16} />
+                {form.authError}
+              </p>
+            )}
+            {!otpSent && loginMode === 'phone' ? (
+              form.phone.trim() ? (
+                <div className="login-phone-delivery">
+                  <div className="login-phone-delivery__buttons">
+                    <button
+                      type="button"
+                      className="button login-phone-delivery__button"
+                      onClick={() => void sendOtp('sms')}
+                      disabled={!normalizePhoneNumber(form.phone) || isSubmitting || isResending}
+                    >
+                      {sendingChannel === 'sms' ? (
+                        <>
+                          <span className="login-spinner" /> Sending OTP…
+                        </>
+                      ) : (
+                        'Send OTP via SMS'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--primary login-phone-delivery__button"
+                      onClick={() => void sendOtp('whatsapp')}
+                      disabled={!normalizePhoneNumber(form.phone) || isSubmitting || isResending}
+                    >
+                      {sendingChannel === 'whatsapp' ? (
+                        <>
+                          <span className="login-spinner" /> Sending OTP…
+                        </>
+                      ) : (
+                        'Send OTP via WhatsApp'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : null) : (
-              <button type="submit" className="button button--primary login-submit" disabled={otpSent ? isSubmitting || isResending : isSubmitting || isResending}>
-                {isResending ? <><span className="login-spinner"/> Sending OTP…</> : isSubmitting ? <><span className="login-spinner"/> {otpSent ? 'Verifying…' : 'Sending OTP…'}</> : <>{otpSent ? loginMode === 'phone' ? 'Verify & Continue' : 'Verify OTP & Login' : 'Send OTP'} <ArrowRight size={16}/></>}
+              ) : null
+            ) : (
+              <button
+                type="submit"
+                className="button button--primary login-submit"
+                disabled={otpSent ? isSubmitting || isResending : isSubmitting || isResending}
+              >
+                {isResending ? (
+                  <>
+                    <span className="login-spinner" /> Sending OTP…
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <span className="login-spinner" /> {otpSent ? 'Verifying…' : 'Sending OTP…'}
+                  </>
+                ) : (
+                  <>
+                    {otpSent
+                      ? loginMode === 'phone'
+                        ? 'Verify & Continue'
+                        : 'Verify OTP & Login'
+                      : 'Send OTP'}{' '}
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
             )}
           </form>
 
-          <div className="login-security-note"><ShieldCheck size={14}/> Your account details are handled securely.</div>
+          <div className="login-security-note">
+            <ShieldCheck size={14} /> Your account details are handled securely.
+          </div>
           <LoginFooter />
         </div>
       </section>
