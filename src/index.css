@@ -10620,3 +10620,72 @@ html body .page-hero .dashboard-search svg { color: #E6F4EA !important; }
 /* Header: sticky glass bar over the white canvas. */
 .app-shell__main > .header { position: sticky; top: 0; z-index: 40; background: rgb(255 255 255 / 82%) !important; backdrop-filter: saturate(160%) blur(12px); -webkit-backdrop-filter: saturate(160%) blur(12px); }
 html body .page-hero .page-hero__actions .holiday-more-button svg { width: 18px !important; height: 18px !important; color: #FFFFFF !important; stroke: #FFFFFF !important; opacity: 1 !important; }
+
+/* ===================================================================
+ * Login fits on one screen: no page scroll on laptops, desktops or phones.
+ * Spacing scales with viewport height; decorative extras drop out first on
+ * short screens, and the form panel scrolls internally only as a last resort.
+ * =================================================================== */
+html body .auth-screen {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(10px, 3vh, 40px) clamp(12px, 3vw, 48px);
+}
+html body .auth-layout { width: min(1240px, 100%); height: 100%; max-height: 860px; min-height: 0 !important; }
+html body .login-brand-panel { min-height: 0; padding: clamp(22px, 5vh, 60px) clamp(26px, 4vw, 60px); }
+html body .login-brand-copy { margin: auto 0 clamp(14px, 3vh, 30px); padding-top: 0; }
+html body .login-brand-kicker { margin-bottom: clamp(8px, 1.8vh, 19px); }
+html body .login-brand-copy h1 { font-size: clamp(26px, min(3.2vw, 5.4vh), 44px); }
+html body .login-brand-copy p { margin-top: clamp(8px, 1.6vh, 17px); line-height: 1.6; }
+html body .login-feature-list { gap: clamp(4px, 1vh, 11px) 12px; margin-bottom: clamp(12px, 2.6vh, 25px); }
+html body .login-feature-list li { min-height: clamp(32px, 5vh, 44px); }
+html body .login-brand-footer { margin-top: clamp(10px, 2vh, 24px); }
+html body .login-form-panel { min-height: 0; overflow-y: auto; padding: clamp(20px, 4.5vh, 64px) clamp(24px, 4.5vw, 68px); scrollbar-width: thin; }
+html body .login-upgrate-logo { width: auto; max-width: min(76%, 280px); max-height: clamp(54px, 12vh, 110px); margin-bottom: clamp(10px, 3vh, 26px); }
+html body .auth-screen__description { margin-bottom: clamp(14px, 3vh, 24px); }
+
+@media (max-height: 820px) and (min-width: 621px) { html body .login-insight-card { display: none; } }
+@media (max-height: 620px) and (min-width: 621px) { html body .login-feature-list, html body .login-brand-footer { display: none; } }
+
+/* Phones: brand panel collapses to a slim banner so the form sits on the same screen. */
+@media (max-width: 620px) {
+  html body .auth-screen { padding: 10px; }
+  html body .auth-layout { max-height: none; grid-template-rows: auto minmax(0, 1fr); border-radius: 18px; }
+  html body .login-brand-panel { padding: 16px 20px; }
+  html body .login-brand-copy { margin: 0; }
+  html body .login-brand-copy h1 { max-width: none; font-size: 20px; letter-spacing: -0.4px; }
+  html body .login-brand-kicker { margin-bottom: 6px; font-size: 11px; }
+  html body .login-brand-copy p,
+  html body .login-feature-list,
+  html body .login-insight-card,
+  html body .login-brand-footer { display: none; }
+  html body .login-brand-glow--two { display: none; }
+  html body .login-form-panel { padding: 20px 20px 16px; }
+  html body .login-upgrate-logo { max-height: 64px; margin-bottom: 12px; }
+  html body .auth-screen__title { font-size: 24px; }
+}
+
+/* Keep the card's single row locked to the screen height; a longer form (OTP step) scrolls inside its panel instead of stretching the card. */
+@media (min-width: 621px) { html body .auth-layout { grid-template-rows: minmax(0, 1fr); } }
+
+/* Short screens (most laptops): tighten the form so the OTP step and its Verify button stay visible. */
+@media (max-height: 760px) and (min-width: 621px) {
+  html body .login-upgrate-logo { max-height: 64px; margin-bottom: 8px; }
+  html body .auth-screen__eyebrow { margin-bottom: 6px; }
+  html body .auth-screen__title { font-size: 25px; }
+  html body .auth-screen__description { margin: 6px 0 14px; }
+  html body .login-form { gap: 10px; }
+  html body .login-demo-otp-toast { padding: 8px 14px; }
+  html body .login-demo-otp-toast small { display: none; }
+  html body .login-otp-status { margin: 4px 0 0; }
+}
+
+/* Vertically center the sign-in form in its panel ("safe" keeps the top reachable if it ever overflows). */
+html body .login-form-panel { justify-content: safe center !important; }
+html body .login-form-column { display: flex; min-height: 0; flex-direction: column; }
+html body .login-form-column > .login-form-panel { flex: 1 1 auto; height: 100%; }
+html body .login-form-panel > .login-form-content { margin-block: auto; }

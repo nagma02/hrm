@@ -351,7 +351,7 @@ export function LoginForm() {
   return (
     <div className="login-form-column">
       <section
-        className="login-form-panel !min-h-[520px] !flex !flex-col !justify-between transition-all duration-300 ease-in-out"
+        className="login-form-panel !flex !flex-col !justify-between transition-all duration-300 ease-in-out"
         aria-labelledby="login-title"
       >
         <div className="login-form-content">

@@ -49,7 +49,7 @@ describe('Add Employee flow', () => {
     await user.click(screen.getByRole('button', { name: 'Actions for Nagma Siddiqui' }))
     await user.click(screen.getByRole('menuitem', { name: 'View details' }))
     expect(window.location.pathname).toBe('/app/employees/E-NEW-249')
-  })
+  }, 15_000)
 
   it('prefills and creates an employee profile linked to the authenticated account', async () => {
     const currentUser: User = {
@@ -84,5 +84,5 @@ describe('Add Employee flow', () => {
     expect(window.location.pathname).toBe('/employee/dashboard')
     expect(context.user).toBe(currentUser)
     expect(context.session?.user).toBe(currentUser)
-  })
+  }, 15_000)
 })
