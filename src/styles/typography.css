@@ -1,0 +1,148 @@
+/*
+ * HRM typography system — one scale for every screen in both portals.
+ *
+ *   Page title      22 → 28px  bold      (h1, page hero titles)
+ *   Section title   16 → 18px  bold      (h2/h3, card and panel headings)
+ *   Sub-heading     15px       semibold  (h4–h6)
+ *   Stat value      22 → 26px  bold      (metric numbers on summary cards)
+ *   Body            14px       regular   (paragraphs, table cells, inputs, labels)
+ *   Small           12px       regular   (meta lines, hints, pills)
+ *   Caption         11px       semibold, uppercase (eyebrows, table headers, nav groups)
+ *
+ * Bold (700) is reserved for headings and stat values. Everything else is
+ * regular (400) or, for emphasis inside content and for controls, medium (500).
+ *
+ * Why a cascade layer + !important: src/index.css has grown many page-scoped
+ * overrides that also use !important. Important declarations inside a layer win
+ * over unlayered important ones regardless of selector specificity, so this one
+ * file sets type for the whole app without editing hundreds of legacy rules.
+ * Sizes use clamp() so they scale smoothly from phones to wide desktops.
+ */
+:root {
+  --hrm-fs-page: clamp(1.375rem, 1.15rem + 0.75vw, 1.75rem);
+  --hrm-fs-section: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+  --hrm-fs-subsection: 0.9375rem;
+  --hrm-fs-stat: clamp(1.375rem, 1.25rem + 0.4vw, 1.625rem);
+  --hrm-fs-body: 0.875rem;
+  --hrm-fs-small: 0.75rem;
+  --hrm-fs-caption: 0.6875rem;
+  --hrm-fw-regular: 400;
+  --hrm-fw-medium: 500;
+  --hrm-fw-semibold: 600;
+  --hrm-fw-bold: 700;
+}
+
+@layer hrm-typography {
+  /* ---- Base: any text without a role below is body size. Zero specificity, so every
+     specific rule in this layer (headings, stats, pills, captions…) overrides it. ---- */
+  :where(div, span, strong, b, em, i, a, time, output, legend, summary, blockquote) {
+    font-size: var(--hrm-fs-body) !important;
+  }
+  /* Text nested inside a sized element follows that element. */
+  :where(
+    h1, h2, h3, h4, h5, h6, small, label, th, button, .button, [role='tab'], .table-filter-tab,
+    .badge, .status-pill, .status-badge, .status-dot-badge, .employee-grid-status, .employee-grid-tag,
+    .employee-status-pill, .holiday-type-pill, .holiday-duration-pill, .user-session-role, .user-session-status,
+    .loan-type, .loan-status, .comp-off-status, .page-hero__chip, .notification-badge,
+    .eyebrow, .page-hero__eyebrow, .nav-label, .stat-card__label, .stat-card__hint, .stat-card__value
+  ) :where(div, span, strong, b, em, i, a, time, small) {
+    font-size: inherit !important;
+  }
+  /* Graphics, not text: avatar initials and the sidebar wordmark keep their own size. */
+  :is([class*='avatar'], [class*='avatar'] *, .brand-copy, .brand-copy *, .login-brand-panel, .login-brand-panel *) {
+    font-size: revert-layer !important;
+  }
+
+  /* ---- Body: the default for all running text and form controls ---- */
+  body {
+    font-size: var(--hrm-fs-body) !important;
+    font-weight: var(--hrm-fw-regular) !important;
+    line-height: 1.5;
+  }
+  :is(p, li, td, dd, dt, label, input, select, textarea, option, blockquote, figcaption, .crumbs, .section-description) {
+    font-size: var(--hrm-fs-body) !important;
+    font-weight: var(--hrm-fw-regular) !important;
+  }
+  :is(small, caption, .muted, .field-error, .stat-card__hint, .page-hero__subtitle small, .sidebar-footnote, .table-filter-tab__count) {
+    font-size: var(--hrm-fs-small) !important;
+    font-weight: var(--hrm-fw-regular) !important;
+  }
+  label { letter-spacing: normal !important; text-transform: none !important; }
+
+  /* Emphasis anywhere outside headings (names in tables and lists, announcement and
+     holiday titles, card meta values) is medium, not bold. Headings and stat values
+     below use more specific selectors, so they stay bold. */
+  :is(strong, b) { font-weight: var(--hrm-fw-medium) !important; }
+  :is(td, p, li, dd, dt, label, [class*='meta'], [class*='-detail'], .crumbs) :is(strong, b) { font-size: inherit !important; }
+
+  /* ---- Headings: the only bold text ---- */
+  :is(h1, .page-hero__title, .app-page-title, .page-title, .employee-page-title, .employee-profile-title, .auth-screen__title) {
+    font-size: var(--hrm-fs-page) !important;
+    font-weight: var(--hrm-fw-bold) !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.02em !important;
+  }
+  :is(h2, h3, .section-title:not(.app-page-title), .card-title) {
+    font-size: var(--hrm-fs-section) !important;
+    font-weight: var(--hrm-fw-bold) !important;
+    line-height: 1.3 !important;
+    letter-spacing: -0.01em !important;
+  }
+  :is(h4, h5, h6) {
+    font-size: var(--hrm-fs-subsection) !important;
+    font-weight: var(--hrm-fw-semibold) !important;
+    line-height: 1.35 !important;
+  }
+  /* Text nested inside a heading follows the heading. */
+  :is(h1, h2, h3, h4, h5, h6) :is(span, strong, b, small, em) { font-size: inherit !important; font-weight: inherit !important; }
+
+  /* The login panel headline is a display line, one step above page titles. */
+  .login-brand-copy h1 { font-size: clamp(1.5rem, 1rem + 2vw, 2.5rem) !important; }
+
+  /* ---- Stat values on metric cards: heading weight, one size ---- */
+  :is(
+    .stat-card__value, .hrm-stat-card strong, .stat-tile strong, .leave-stat-copy strong,
+    .payroll-summary-card strong, .attendance-sheet-summary article strong, .employee-attendance-stat strong,
+    .employee-payroll-metric > strong, .leave-approved-summary strong, .designation-overview-total strong,
+    .shift-board-total strong, .attendance-donut-center strong, .designation-donut-center strong,
+    .goal-gauge-label strong, .designation-ring-copy > strong, .designation-hierarchy-summary > strong,
+    .employee-leave-balance-card > strong, .login-insight-metric
+  ) {
+    font-size: var(--hrm-fs-stat) !important;
+    font-weight: var(--hrm-fw-bold) !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.02em !important;
+  }
+  .employee-leave-balance-card > strong b { font-size: inherit !important; font-weight: inherit !important; }
+
+  /* ---- Captions: eyebrows, table headers, navigation group labels ---- */
+  :is(th, .eyebrow, .page-hero__eyebrow, .nav-label, .nav-section-label, .auth-screen__eyebrow, .stat-card__label, .hrm-stat-card > div > span:first-child,
+      .stat-tile-top > span:first-child, .leave-stat-copy > span, .designation-ring-copy > span, .employee-attendance-stat > span, .employee-payroll-metric > span) {
+    font-size: var(--hrm-fs-caption) !important;
+    font-weight: var(--hrm-fw-semibold) !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+  }
+
+  /* ---- Controls ---- */
+  :is(button, .button, a.button, .nav-item, .nav-subitem, [role='tab'], .table-filter-tab) {
+    font-size: var(--hrm-fs-body) !important;
+    font-weight: var(--hrm-fw-medium) !important;
+  }
+  :is(.nav-item.active, .nav-subitem.active, [role='tab'][aria-selected='true']) { font-weight: var(--hrm-fw-semibold) !important; }
+
+  /* Pills and badges */
+  :is(
+    .badge, .status-pill, .status-badge, .status-dot-badge, .employee-grid-status, .employee-grid-tag,
+    .employee-status-pill, .holiday-type-pill, .holiday-duration-pill, .user-session-role, .user-session-status,
+    .loan-type, .loan-status, .comp-off-status, .page-hero__chip, .notification-badge
+  ) {
+    font-size: var(--hrm-fs-small) !important;
+    font-weight: var(--hrm-fw-medium) !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  /* Header account summary: designation line + email */
+  .profile-name { font-size: var(--hrm-fs-body) !important; font-weight: var(--hrm-fw-medium) !important; }
+  .profile-name small { font-size: var(--hrm-fs-small) !important; font-weight: var(--hrm-fw-regular) !important; }
+}

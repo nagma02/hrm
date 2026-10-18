@@ -22,7 +22,7 @@ export function EntityCell({
     <div className={cn('flex items-center gap-3', className)}>
       {avatar}
       <div className="min-w-0">
-        <div className="font-semibold text-slate-900 text-[13.5px] leading-snug truncate">
+        <div className="font-medium text-slate-900 text-[13.5px] leading-snug truncate">
           {title}
         </div>
         {subtitle && (
@@ -36,7 +36,7 @@ export function EntityCell({
               <span
                 key={idx}
                 className={cn(
-                  'px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide',
+                  'px-2 py-0.5 rounded-md text-[11px] font-medium tracking-wide',
                   tag.variant === 'green'
                     ? 'bg-[#E6F4EA] text-[#1E7E48]'
                     : 'bg-[#E6F4EA] text-[#1B362B]'

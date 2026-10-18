@@ -189,7 +189,7 @@ export default function ModuleDataTable({
                 </TableCell>
                 <TableCell>
                   <div className="text-xs font-medium text-slate-700">
-                    <div>In: <span className="font-semibold text-slate-900">{checkIn}</span></div>
+                    <div>In: <span className="font-medium text-slate-900">{checkIn}</span></div>
                     <div className="text-[11px] text-slate-400 mt-0.5">Out: {checkOut}</div>
                   </div>
                 </TableCell>

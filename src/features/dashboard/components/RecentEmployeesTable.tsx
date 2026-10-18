@@ -55,7 +55,7 @@ export default function RecentEmployeesTable() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-semibold text-foreground text-sm">{r.firstName} {r.lastName}</div>
+                      <div className="font-medium text-foreground text-sm">{r.firstName} {r.lastName}</div>
                       <div className="text-xs text-muted-foreground">{r.title}</div>
                     </div>
                   </button>

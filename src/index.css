@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './styles/typography.css';
 @config '../tailwind.config.cjs';
 
 @theme {
@@ -10689,3 +10690,34 @@ html body .login-form-panel { justify-content: safe center !important; }
 html body .login-form-column { display: flex; min-height: 0; flex-direction: column; }
 html body .login-form-column > .login-form-panel { flex: 1 1 auto; height: 100%; }
 html body .login-form-panel > .login-form-content { margin-block: auto; }
+/* Leave room for the absolutely positioned trend badge so the hint never runs under it. */
+.app-shell--employee-portal .employee-dashboard-page .employee-dashboard-kpis .stat-card:has(.stat-card__change) .stat-card__hint { padding-right: 46px; }
+/* Upcoming items: title on its own line, date/meta underneath. */
+.employee-upcoming-list :is(strong, b) + small { display: block; margin-top: 2px; }
+
+/* Responsive containment: grid/flex children default to `min-width: auto`, so one wide
+ * table (min-width 760px) used to stretch the whole page past the phone screen.
+ * Letting page containers shrink keeps wide tables scrolling inside their own
+ * .table-scroll box instead. Icon tiles are excluded so they never squash. */
+.app-shell__content :where(
+  section, article, form, header, aside, nav, ul,
+  [class*='page'], [class*='panel'], [class*='card'], [class*='grid'], [class*='layout'],
+  [class*='shell'], [class*='content'], [class*='container'], [class*='wrap'], [class*='list'],
+  [class*='section'], [class*='table'], [class*='tools'], [class*='filters'], [class*='toolbar']
+):not([class*='icon']):not([class*='avatar']) { min-width: 0; }
+.app-shell__content :where(.table-scroll, .table-shell) { max-width: 100%; }
+.app-shell__content :where(select, input, textarea) { max-width: 100%; }
+/* Long values (emails, IDs) wrap instead of pushing the row off-screen. */
+.employee-detail-row strong { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .setting-field { flex-wrap: wrap; }
+  html body .setting-field > :is(select, .toolbar-select) { width: 100% !important; max-width: 100% !important; }
+}
+@media (max-width: 640px) {
+  html body .module-settings-layout .settings-field-list .setting-field > :is(select, input:not([type='checkbox']):not([type='radio']), textarea, .toolbar-select) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+  }
+}

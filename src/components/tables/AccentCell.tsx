@@ -24,7 +24,7 @@ export function AccentCell({
 
   return (
     <div className={cn('border-l-2 pl-2.5 py-0.5', colorStyles[color], className)}>
-      <div className="text-xs font-semibold leading-tight">{title}</div>
+      <div className="text-xs font-medium leading-tight">{title}</div>
       {subtitle && (
         <div className="text-[11px] font-normal text-slate-400 mt-0.5">
           {subtitle}
