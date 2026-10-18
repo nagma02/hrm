@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
+import PageHeader from '@/features/shared/PageHeader'
 import { employeeStore } from '../data/employeeStore'
 import { navigateTo } from '@/app/router/navigation'
 import { useLocation } from '@/hooks/use-location'
@@ -191,19 +192,19 @@ export default function EmployeeCreatePage() {
   return (
     <PageContainer>
       <div className="employee-profile-page">
-        <div className="employee-profile-header">
-          <div>
-            <h1 className="employee-profile-title">Add Employee</h1>
-            <p className="employee-profile-subtitle">Create a new employee record and complete onboarding details</p>
-          </div>
-
-          <div className="employee-profile-header-actions">
-            <span className="employee-profile-status-pill">Active</span>
-            <button type="button" className="employee-profile-primary-action" aria-label="Save draft" onClick={submitForm}>
-              Save draft
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow={editing ? 'People · Employee record' : 'People · Onboarding'}
+          title={editing ? 'Edit Employee' : 'Add Employee'}
+          subtitle={editing ? 'Update personal and employment details for this employee' : 'Create a new employee record and complete onboarding details'}
+          actions={
+            <>
+              <span className="page-hero__chip">Active</span>
+              <button type="button" className="button primary" aria-label="Save draft" onClick={submitForm}>
+                Save draft
+              </button>
+            </>
+          }
+        />
 
         <nav className="employee-profile-tabs" aria-label="Employee sections">
           {steps.map((item, index) => (

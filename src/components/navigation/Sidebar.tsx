@@ -45,6 +45,21 @@ const adminPermissionByPath: Record<string, string> = {
   '/app/user-sessions': 'settings.view',
 }
 
+/** Section label rendered above the first link of each group. */
+const sectionByHref: Record<string, string> = {
+  '/app/dashboard': 'Overview',
+  '/app/employees': 'People',
+  '/app/attendance': 'Time & Attendance',
+  '/app/departments': 'Organization',
+  '/app/payroll': 'Payroll & Finance',
+  '/app/documents': 'Workplace',
+  '/app/user-sessions': 'Administration',
+  '/employee/dashboard': 'Overview',
+  '/employee/attendance': 'My Time',
+  '/employee/payments': 'My Pay',
+  '/employee/documents': 'Workplace',
+}
+
 export type SidebarItem = readonly [label: string, href: string, icon: typeof LayoutDashboard]
 
 export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void; items?: ReadonlyArray<SidebarItem> } = {}) {
@@ -86,7 +101,6 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
 
   return <div className={`side-nav ${collapsed ? 'is-collapsed' : ''}`}>
     <div className="brand"><span className="brand-mark brand-mark--logo"><img src="/logo-sidebar.png" alt="Upgrate" /></span>{!collapsed && <span className="brand-copy">HRM<small>Human Resource Management</small></span>}</div>
-    <div className="nav-label">WORKSPACE</div>
     <nav aria-label="Main navigation">
       {links.map(([label, href, Icon]) => {
         const isAttendanceGroup = label === 'Attendance' && attendanceVisible
@@ -94,8 +108,11 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
         const isPayrollGroup = label === 'Payroll' && payrollVisible
         const isApprovalsGroup = label === 'Approvals' && payrollVisible
 
+        const section = sectionByHref[href]
+
         return (
           <div key={href}>
+            {section ? (collapsed ? <div className="nav-section-divider" aria-hidden="true" /> : <div className="nav-label nav-section-label">{section}</div>) : null}
             {isAttendanceGroup ? (
               <div className="nav-group">
                 <button

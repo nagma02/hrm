@@ -1,3 +1,4 @@
+import PageHeader from '@/features/shared/PageHeader'
 import { useMemo, useState, type FormEvent } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -68,7 +69,7 @@ export default function HolidaysPage() {
   return <PageContainer>
     <div className="holiday-breadcrumb"><span>⌂</span><span>Home</span><b>›</b><span>Holidays</span><b>›</b><strong>All Holidays</strong></div>
     <section className="panel holiday-admin-panel">
-      <header className="holiday-admin-heading"><h1>All Holidays</h1><div><button className="button primary" onClick={() => openForm()}><Plus size={15} /> Add Holiday</button><button className="button holiday-more-button" aria-label="Holiday actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><MoreVertical size={17} /></button>{menuOpen && <div className="holiday-actions-menu"><button onClick={() => { exportCsv(filtered); setMenuOpen(false) }}>Export holidays</button></div>}</div></header>
+      <PageHeader eyebrow="Workplace" title="Holidays" subtitle="Company-wide holiday calendar for every location and team." actions={<div className="holiday-admin-heading__actions"><button className="button primary" onClick={() => openForm()}><Plus size={15} /> Add Holiday</button><button className="button holiday-more-button" aria-label="Holiday actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><MoreVertical size={17} /></button>{menuOpen && <div className="holiday-actions-menu"><button onClick={() => { exportCsv(filtered); setMenuOpen(false) }}>Export holidays</button></div>}</div>} />
       <div className="holiday-table-tools"><label>Show<select aria-label="Holidays per page" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1) }}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select> entries per page</label><label>Search:<input aria-label="Search holidays" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search holidays..." /></label></div>
       <div className="table-scroll holiday-admin-table-scroll">
         <Table className="hr-table holiday-admin-table">

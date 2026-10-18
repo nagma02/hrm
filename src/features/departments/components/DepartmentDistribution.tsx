@@ -29,7 +29,7 @@ export default function DepartmentDistribution({ rows }: { rows: ModuleRow[] }) 
             <h3>{row.name}</h3>
             <div className="department-overview-meta"><span>Department lead</span><strong>{manager}</strong></div>
             <div className="department-overview-meta"><span><MapPin size={13} />{row.detail}</span><strong>{employees} people</strong></div>
-            <div className="department-overview-meta"><span>Demo payroll cost</span><strong>${payrollCost.toLocaleString('en-US')}</strong></div>
+            <div className="department-overview-meta"><span>Demo payroll cost</span><strong>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payrollCost)}</strong></div>
             <div className="department-overview-meta"><span>Designations</span><strong>{titles.length ? titles.join(', ') : 'Not configured'}</strong></div>
             <div className="department-distribution-track"><i style={{ width: `${employees / max * 100}%` }} /></div>
           </article>

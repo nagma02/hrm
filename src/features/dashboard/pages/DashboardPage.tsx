@@ -23,19 +23,19 @@ export default function DashboardPage() {
   const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
   return (
     <div className="dashboard-page">
-      <div className="page-header dashboard-header">
-        <div>
-          <p className="eyebrow">{todayLabel.toUpperCase()}</p>
-          <h2 className="section-title app-page-title">Welcome back, {user?.name ?? 'there'}</h2>
-          <div style={{ color: 'var(--color-muted)', marginTop: 6 }}>Dashboard overview and today's HR summary</div>
+      <section className="page-hero dashboard-hero">
+        <div className="page-hero__copy">
+          <span className="page-hero__eyebrow">{todayLabel}</span>
+          <h1 className="page-hero__title">Welcome back, {user?.name ?? 'there'}</h1>
+          <p className="page-hero__subtitle">Here's your organization at a glance — attendance, leave, payroll and people, all in one place.</p>
         </div>
 
-        <div className="dashboard-actions">
+        <div className="page-hero__actions dashboard-actions">
           <label className="dashboard-search"><Search size={15}/><input placeholder="Search employees..." aria-label="Search employees" onKeyDown={(e) => { if(e.key==='Enter'&&e.currentTarget.value.trim()) navigateTo(`/app/employees?search=${encodeURIComponent(e.currentTarget.value.trim())}`) }}/></label>
           <button className="button header__ghost-button" onClick={() => window.location.reload()}><RotateCw size={14}/> Refresh</button>
           <button className="button header__primary-button" onClick={() => navigateTo('/app/employees/create')}><Plus size={15}/> Add Employee</button>
         </div>
-      </div>
+      </section>
 
       <StatsGrid />
 

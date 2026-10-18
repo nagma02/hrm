@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import PageContainer from '@/features/shared/PageContainer'
+import PageHeader from '@/features/shared/PageHeader'
 import { useEmployees } from '../hooks/useEmployees'
 import { navigateTo } from '@/app/router/navigation'
 import { toast } from 'sonner'
@@ -105,17 +106,17 @@ export default function EmployeesPage() {
   return (
     <PageContainer>
       <div className="employee-application-shell">
-        <div className="employee-page-header-row">
-          <div className="employee-page-heading-wrap">
-            <span className="employee-page-badge">Employee</span>
-            <h1 className="employee-page-title">Employees</h1>
-          </div>
-
-          <button type="button" className="employee-add-button" onClick={() => navigateTo('/app/employees/create')}>
-            <Plus size={14} />
-            Add Employee
-          </button>
-        </div>
+        <PageHeader
+          eyebrow="People"
+          title="Employees"
+          subtitle={`${allEmployees.length} people across your organization — search, filter and manage every record.`}
+          actions={
+            <button type="button" className="button primary" onClick={() => navigateTo('/app/employees/create')}>
+              <Plus size={15} />
+              Add Employee
+            </button>
+          }
+        />
 
         <TableFilterTabs
           className="employee-type-tabs"

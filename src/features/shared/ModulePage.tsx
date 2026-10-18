@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { navigateTo } from '@/app/router/navigation'
 import ModuleDataTable from './components/ModuleDataTable'
 import ModuleStats from './components/ModuleStats'
+import PageHeader from './PageHeader'
 import { moduleSeeds, type ModuleRow } from './data/moduleData'
 import ShiftSchedule from '@/features/shifts/components/ShiftSchedule'
 import DepartmentDistribution from '@/features/departments/components/DepartmentDistribution'
@@ -269,13 +270,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
   if (module === 'settings')
     return (
       <div className="module-page">
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">PREFERENCES</p>
-            <h1 className="app-page-title">Settings</h1>
-            <p>Manage your workspace and personal preferences.</p>
-          </div>
-        </div>
+        <PageHeader eyebrow="Preferences" title="Settings" subtitle="Manage your workspace and personal preferences." />
         <SettingsContent />
       </div>
     )
@@ -313,21 +308,11 @@ export default function ModulePage({ module, subroute }: { module: string; subro
 
   return (
     <div className={`module-page module-page--${module}`}>
-      <div
-        className={`page-heading ${['shifts', 'departments', 'designations'].includes(module) ? `module-heading module-heading--${module}` : ''}`}
-      >
-        <div>
-          <p className="eyebrow">WORKSPACE / {title.toUpperCase()}</p>
-          <h1 className="app-page-title">
-            {subroute === 'approvals'
-              ? 'Leave approvals'
-              : subroute === 'correction'
-                ? 'Attendance corrections'
-                : title}
-          </h1>
-          <p>{description}</p>
-        </div>
-        <div className="heading-actions">
+      <PageHeader
+        eyebrow={title}
+        title={subroute === 'approvals' ? 'Leave approvals' : subroute === 'correction' ? 'Attendance corrections' : title}
+        subtitle={description}
+        actions={<>
           {module === 'attendance' && (
             <>
               <button className="button" onClick={() => navigateTo('/app/attendance/corrections')}>
@@ -358,8 +343,8 @@ export default function ModulePage({ module, subroute }: { module: string; subro
                   : 'Add Shift'}
             </button>
           )}
-        </div>
-      </div>
+        </>}
+      />
 
       <ModuleStats module={module} rows={rows} />
       {module === 'shifts' && <ShiftSchedule rows={rows} />}

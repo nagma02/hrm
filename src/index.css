@@ -9825,7 +9825,7 @@ html:not(.dark) body .button--primary svg,
 html:not(.dark) body .employee-add-button svg { color: #FFFFFF !important; }
 
 /* Secondary actions: plain .button and secondary/outline variants */
-html:not(.dark) body .button:not(.primary):not(.button--primary):not(.danger):not(.button--destructive):not(.button--ghost):not(.button--link):not(.login-submit):not(.leave-reject-button):not(.attendance-compare):not(.user-session-logout):not(.header__primary-button):not(.employee-add-button):not(.employee-profile-primary-action):not(.primary-action):not(.btn-primary):not(.comp-off-view),
+html:not(.dark) body .button:not(.page-hero__actions *):not(.primary):not(.button--primary):not(.danger):not(.button--destructive):not(.button--ghost):not(.button--link):not(.login-submit):not(.leave-reject-button):not(.attendance-compare):not(.user-session-logout):not(.header__primary-button):not(.employee-add-button):not(.employee-profile-primary-action):not(.primary-action):not(.btn-primary):not(.comp-off-view),
 html:not(.dark) body .header__ghost-button,
 html:not(.dark) body .profile-action-button {
   border: 1px solid #E6F4EA !important;
@@ -9835,7 +9835,7 @@ html:not(.dark) body .profile-action-button {
   color: #1B362B !important;
   box-shadow: none !important;
 }
-html:not(.dark) body .button:not(.primary):not(.button--primary):not(.danger):not(.button--destructive):not(.button--ghost):not(.button--link):not(.login-submit):not(.leave-reject-button):not(.attendance-compare):not(.user-session-logout):not(.header__primary-button):not(.employee-add-button):not(.employee-profile-primary-action):not(.primary-action):not(.btn-primary):not(.comp-off-view):hover,
+html:not(.dark) body .button:not(.page-hero__actions *):not(.primary):not(.button--primary):not(.danger):not(.button--destructive):not(.button--ghost):not(.button--link):not(.login-submit):not(.leave-reject-button):not(.attendance-compare):not(.user-session-logout):not(.header__primary-button):not(.employee-add-button):not(.employee-profile-primary-action):not(.primary-action):not(.btn-primary):not(.comp-off-view):hover,
 html:not(.dark) body .header__ghost-button:hover,
 html:not(.dark) body .profile-action-button:hover {
   border-color: #CFEBD7 !important;
@@ -10503,3 +10503,120 @@ html body .module-settings-layout .settings-form button[type='submit'] { margin-
   .payroll-page .payroll-filters { flex-wrap: wrap; }
   .payroll-page .payroll-filters > .table-search { flex: 1 1 100%; min-width: 0; }
 }
+
+/* ===================================================================
+ * Modern HRM layer — page hero, grouped sidebar, glass header.
+ * Uses only the 3-color system: #1B362B, #2A5243 / #E6F4EA, #FFFFFF.
+ * =================================================================== */
+
+/* Page hero: the login brand panel's look, carried onto every module page. */
+.page-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 24px;
+  margin: 0 0 20px;
+  padding: 26px 28px;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgb(75 130 111 / 45%) 0%, transparent 55%),
+    linear-gradient(135deg, #1B362B 0%, #21402F 55%, #2A5243 100%);
+  color: #FFFFFF;
+  box-shadow: 0 18px 40px -22px rgb(27 54 43 / 55%);
+}
+.page-hero::before,
+.page-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgb(230 244 234 / 12%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.page-hero::before { top: -120px; right: -60px; width: 320px; height: 320px; box-shadow: 0 0 0 46px rgb(230 244 234 / 3%); }
+.page-hero::after { bottom: -150px; right: 180px; width: 260px; height: 260px; }
+.page-hero__copy { display: grid; gap: 6px; min-width: 0; max-width: 760px; }
+.page-hero__eyebrow {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgb(230 244 234 / 22%);
+  border-radius: 999px;
+  background: rgb(230 244 234 / 10%);
+  color: #E6F4EA;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.page-hero__title { margin: 4px 0 0; color: #FFFFFF !important; font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; }
+.page-hero__subtitle { margin: 0; color: rgb(230 244 234 / 82%) !important; font-size: 0.95rem; line-height: 1.55; }
+.page-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.page-hero__actions > div { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Actions sit on dark green: primary turns white, secondary turns glass, danger stays red.
+ * `html body` + !important is needed to outrank page-scoped legacy button rules. */
+html body .page-hero .page-hero__actions :is(.button, button, a.button) {
+  min-height: 40px !important;
+  height: auto !important;
+  padding: 0 16px !important;
+  border: 1px solid rgb(230 244 234 / 28%) !important;
+  border-radius: 12px !important;
+  background: rgb(255 255 255 / 10%) !important;
+  color: #FFFFFF !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(6px);
+  transition: background-color .2s ease, transform .2s ease;
+}
+html body .page-hero .page-hero__actions :is(.button, button, a.button):hover { background: rgb(255 255 255 / 18%) !important; transform: translateY(-1px); }
+html body .page-hero .page-hero__actions :is(.button, button, a.button) svg { color: currentColor !important; }
+html body .page-hero .page-hero__actions :is(.button.primary, .header__primary-button, .page-hero__cta) {
+  border-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #1B362B !important;
+  font-weight: 700 !important;
+}
+html body .page-hero .page-hero__actions :is(.button.primary, .header__primary-button, .page-hero__cta):hover { background: #E6F4EA !important; }
+html body .page-hero .page-hero__actions :is(.button.danger, .button.danger:hover) { border-color: #EF4444 !important; background: #EF3338 !important; color: #FFFFFF !important; }
+html body .page-hero .page-hero__actions .holiday-more-button { width: 40px; padding: 0 !important; justify-content: center; }
+html body .page-hero .dashboard-search {
+  min-height: 40px;
+  border: 1px solid rgb(230 244 234 / 28%) !important;
+  border-radius: 12px !important;
+  background: rgb(255 255 255 / 10%) !important;
+  color: #E6F4EA !important;
+  box-shadow: none !important;
+}
+html body .page-hero .dashboard-search input { border: 0 !important; background: transparent !important; color: #FFFFFF !important; box-shadow: none !important; }
+html body .page-hero .dashboard-search input::placeholder { color: rgb(230 244 234 / 72%) !important; }
+html body .page-hero .dashboard-search svg { color: #E6F4EA !important; }
+.page-hero .eyebrow { color: #E6F4EA !important; }
+
+@media (max-width: 640px) {
+  .page-hero { padding: 20px 18px; border-radius: 16px; align-items: flex-start; }
+  .page-hero__actions { width: 100%; }
+}
+
+.page-hero__chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid rgb(230 244 234 / 28%); border-radius: 999px; background: rgb(230 244 234 / 12%); color: #E6F4EA; font-size: 12px; font-weight: 700; }
+.page-hero__count { display: inline-grid; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 6px; place-items: center; border-radius: 999px; background: #E6F4EA; color: #1B362B; font-size: 11px; font-weight: 800; }
+.page-hero__actions .holiday-admin-heading__actions { position: relative; display: flex; gap: 10px; }
+
+/* Sidebar: grouped sections, scrollable menu, active rail, signed-in user card. */
+.side-nav > nav { min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgb(230 244 234 / 18%) transparent; }
+.nav-section-label { margin-top: 14px; padding: 0 12px 6px !important; color: rgb(230 244 234 / 48%) !important; font-size: 10.5px !important; font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase; }
+.side-nav > nav > div:first-child > .nav-section-label { margin-top: 0; }
+.nav-section-divider { height: 1px; margin: 10px 14px; background: rgb(230 244 234 / 12%); }
+.side-nav .nav-item.active:not(.nav-item--parent) { position: relative; }
+.side-nav .nav-item.active:not(.nav-item--parent)::after { content: ''; position: absolute; top: 9px; bottom: 9px; left: -1px; width: 3px; border-radius: 0 3px 3px 0; background: #E6F4EA; }
+
+/* Header: sticky glass bar over the white canvas. */
+.app-shell__main > .header { position: sticky; top: 0; z-index: 40; background: rgb(255 255 255 / 82%) !important; backdrop-filter: saturate(160%) blur(12px); -webkit-backdrop-filter: saturate(160%) blur(12px); }
+html body .page-hero .page-hero__actions .holiday-more-button svg { width: 18px !important; height: 18px !important; color: #FFFFFF !important; stroke: #FFFFFF !important; opacity: 1 !important; }

@@ -124,13 +124,13 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       <div className="employee-dashboard-page w-full min-h-screen bg-white !px-6 lg:!px-8 !pt-0 !pb-6 lg:!pb-8 !gap-3.5 !-mx-6 lg:!-mx-8">
-        <header className="page-header dashboard-header">
-          <div>
-            <p className="eyebrow">{new Date(now).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}</p>
-            <h1 className="section-title !text-2xl !font-bold !tracking-tight">Welcome back, {employee?.firstName ?? employeeName.split(' ')[0]}</h1>
-            <div>{todayGreeting} · {employee?.title ?? 'Employee'}{employee?.dept ? ` · ${employee.dept}` : ''}</div>
+        <header className="page-hero dashboard-hero">
+          <div className="page-hero__copy">
+            <span className="page-hero__eyebrow">{new Date(now).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            <h1 className="page-hero__title">Welcome back, {employee?.firstName ?? employeeName.split(' ')[0]}</h1>
+            <p className="page-hero__subtitle">{todayGreeting} · {employee?.title ?? 'Employee'}{employee?.dept ? ` · ${employee.dept}` : ''}</p>
           </div>
-          <div className="dashboard-actions flex items-center !gap-3 sm:!gap-4 flex-wrap mt-2 sm:mt-0">
+          <div className="page-hero__actions dashboard-actions">
             <label className="dashboard-search"><Search size={15}/><input aria-label="Search this dashboard" placeholder="Search anything..." onKeyDown={(event) => {
               if (event.key !== 'Enter' || !event.currentTarget.value.trim()) return
               const query = event.currentTarget.value.trim().toLowerCase()
@@ -138,8 +138,8 @@ export default function DashboardPage() {
                 .find((section) => section.innerText.toLowerCase().includes(query))
               match?.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }}/></label>
-            <button className="button header__ghost-button !h-8 !min-h-8 !rounded-lg !px-3 !text-xs" type="button" onClick={() => window.location.reload()}><RefreshCw size={14}/> Refresh</button>
-            <a className="button header__primary-button !h-8 !min-h-8 !rounded-lg !px-3 !text-xs" href="/employee/leave"><CalendarPlus size={15}/> Apply Leave</a>
+            <button className="button header__ghost-button" type="button" onClick={() => window.location.reload()}><RefreshCw size={14}/> Refresh</button>
+            <a className="button header__primary-button" href="/employee/leave"><CalendarPlus size={15}/> Apply Leave</a>
           </div>
         </header>
 

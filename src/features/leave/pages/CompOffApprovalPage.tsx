@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import PageHeader from '@/features/shared/PageHeader'
 import PageContainer from '@/features/shared/PageContainer'
 import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import { compOffService, type CompOffRequest, type CompOffStatus } from '../services/comp-off.service'
@@ -29,7 +30,7 @@ export function CompOffApprovalPage() {
 
   return <PageContainer>
     <div className="comp-off-page">
-      <h1>CompOff Approval</h1>
+      <PageHeader eyebrow="Time off" title="Comp Off Approvals" subtitle="Review compensatory-off requests earned for extra working days." />
       <div className="comp-off-tabs" role="tablist" aria-label="Comp off request status">
         {(['Pending', ...tabs] as CompOffStatus[]).map((status) => <button key={status} role="tab" aria-selected={filter === status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{status}</button>)}
       </div>

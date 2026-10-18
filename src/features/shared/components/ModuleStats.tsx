@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import type { CSSProperties } from 'react'
 import { BriefcaseBusiness, CalendarDays, CircleAlert, Clock3, CreditCard, Layers3, Users } from 'lucide-react'
-import { attendanceSummary, departmentTotal } from '@/features/dashboard/data/dashboardData'
+import { attendanceSummary } from '@/features/dashboard/data/dashboardData'
+import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import { designationCounts, payrollTrend, shiftAssignmentCounts, type ModuleRow } from '../data/moduleData'
 
 type ModuleStatsProps = { module: string; rows: ModuleRow[] }
@@ -12,6 +13,8 @@ function stat(label: string, value: string | number, caption: string, icon: Reac
 }
 
 export default function ModuleStats({ module, rows }: ModuleStatsProps) {
+  // Live headcount from the employee store (the old static total showed 248 for a 7-person demo).
+  const departmentTotal = useEmployees().length
   const pending = rows.filter((row) => row.status === 'Pending').length
   const active = rows.filter((row) => row.status === 'Active').length
   const stats: Stat[] = module === 'attendance'

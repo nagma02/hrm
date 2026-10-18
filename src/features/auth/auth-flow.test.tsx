@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -451,7 +451,7 @@ describe('authentication portal flow', () => {
     expect(screen.getByRole('button', { name: /^attendance$/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /admin user/i }))
-    expect(screen.getByText('Admin User')).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /admin user/i })).getByText('Admin User')).toBeInTheDocument()
     expect(screen.getByTestId('pathname')).toHaveTextContent('/app/dashboard')
   })
 
