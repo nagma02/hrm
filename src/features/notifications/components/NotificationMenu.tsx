@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, Check, LoaderCircle } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/use-auth'
 import { navigateTo } from '@/app/router/navigation'
 import { useNotifications } from '../hooks/useNotifications'
 import type { NotificationRecord } from '../types/notification.types'
 import { useCurrentEmployee } from '@/features/employees/utils/employee-identity'
+import { ListSkeleton } from '@/components/ui/skeleton'
 
 function formatDateTime(value: string) {
   const date = new Date(value)
@@ -106,7 +107,7 @@ export function NotificationMenu({ portal = 'admin' }: { portal?: 'admin' | 'emp
               {visibleUnreadCount > 0 && <button disabled={busy} onClick={() => void readAll()}><Check size={13}/> Mark all read</button>}
             </div>
           </div>
-          {loading && !visibleItems.length && <p className="notification-state"><LoaderCircle size={15} className="notification-spinner"/> Loading notifications…</p>}
+          {loading && !visibleItems.length && <ListSkeleton rows={4} label="Loading notifications" />}
           {error && <div className="notification-state notification-state--error"><span>{error}</span><button onClick={() => void refresh()}>Retry</button></div>}
           {!loading && !error && !visibleItems.length && <p className="notification-state">You’re all caught up.</p>}
           <div className="notification-list">

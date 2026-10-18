@@ -202,7 +202,7 @@ export function LegalPolicyPage({ type }: LegalPolicyPageProps) {
           className="legal-policy-content"
           dangerouslySetInnerHTML={{ __html: content }}
           style={{
-            color: '#1e293b',
+            color: '#1B362B',
             lineHeight: 1.8,
             display: 'grid',
             gap: 16,

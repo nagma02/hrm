@@ -1,5 +1,17 @@
 import { Check, Eye, Pencil, Power, Printer, Trash2, X } from 'lucide-react'
 import { ActionDropdown, type ActionDropdownItem } from '@/components/ui/action-dropdown'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { StatusDotBadge } from '@/components/tables/StatusDotBadge'
+import { AccentCell } from '@/components/tables/AccentCell'
+import { EntityCell } from '@/components/tables/EntityCell'
 import { useEmployees } from '@/features/employees/hooks/useEmployees'
 import {
   departmentManagers,
@@ -50,13 +62,18 @@ function initials(name: string) {
 
 function PersonCell({ row }: { row: ModuleRow }) {
   return (
-    <div className="person-cell">
-      <span className="avatar-mini">{initials(row.name)}</span>
-      <span>
-        <b>{row.name}</b>
-        <small>{row.id}</small>
-      </span>
-    </div>
+    <EntityCell
+      title={row.name}
+      subtitle={row.id}
+      tags={[{ label: 'INDIVIDUAL', variant: 'gray' }, { label: 'Active', variant: 'green' }]}
+      avatar={
+        <Avatar className="h-9 w-9 rounded-lg">
+          <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
+            {initials(row.name)}
+          </AvatarFallback>
+        </Avatar>
+      }
+    />
   )
 }
 
@@ -71,7 +88,12 @@ export default function ModuleDataTable({
   const employees = useEmployees()
   const status = (value: string) =>
     module === 'payroll' && ['Processed', 'Approved'].includes(value) ? 'Paid' : value
-  const departmentCount = (name: string) => employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && (employee.dept === name || (name === 'People & Culture' && employee.dept === 'HR'))).length
+  const departmentCount = (name: string) =>
+    employees.filter(
+      (employee) =>
+        employee.status.toLowerCase() !== 'inactive' &&
+        (employee.dept === name || (name === 'People & Culture' && employee.dept === 'HR'))
+    ).length
   const countCell = (row: ModuleRow) =>
     module === 'departments'
       ? departmentCount(row.name)
@@ -80,6 +102,7 @@ export default function ModuleDataTable({
         : module === 'shifts'
           ? employees.filter((employee) => employee.status.toLowerCase() !== 'inactive' && employee.shift === row.name).length
           : (designationCounts[row.id] ?? Number(row.detail.match(/(\d+) employees?/)?.[1] ?? 0))
+
   const actions = (row: ModuleRow) => {
     const items: ActionDropdownItem[] = []
 
@@ -98,24 +121,24 @@ export default function ModuleDataTable({
       }
       items.push({ label: `Edit ${module === 'shifts' ? 'shift' : 'department'}`, icon: <Pencil size={14} />, onClick: () => onEdit?.(row) })
       items.push({
-        label: row.status === 'Active' ? 'Deactivate' : 'Activate',
+        label: row.status === 'Active' ? `Deactivate ${module === 'shifts' ? 'shift' : 'department'}` : `Activate ${module === 'shifts' ? 'shift' : 'department'}`,
         icon: <Power size={14} />,
         onClick: () => onToggleStatus?.(row),
       })
-      items.push({ label: 'Delete record', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+      items.push({ label: `Delete ${module === 'shifts' ? 'shift' : 'department'}`, icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+    } else if (module === 'attendance') {
+      items.push({ label: 'Edit attendance', icon: <Pencil size={14} />, onClick: () => onEdit?.(row) })
+      items.push({ label: 'Remove attendance record', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+    } else if (module === 'payroll') {
+      items.push({ label: 'View employee detail', icon: <Eye size={14} />, onClick: () => navigateTo(`/app/payroll/detail/${row.id}`) })
+      items.push({ label: 'Print payslip', icon: <Printer size={14} />, onClick: () => window.print() })
     } else {
-      if (module === 'payroll') {
-        items.push({ label: 'View payslip', icon: <Printer size={14} />, onClick: () => onView?.(row) })
+      if (['Pending', 'Requested'].includes(row.status)) {
+        items.push({ label: 'Approve', icon: <Check size={14} />, onClick: () => onAction(row, 'approve') })
+        items.push({ label: 'Reject', icon: <X size={14} />, destructive: true, onClick: () => onAction(row, 'reject') })
       }
-      if (module === 'attendance') {
-        items.push({ label: 'View attendance', icon: <Eye size={14} />, onClick: () => navigateTo(`/app/attendance/${encodeURIComponent(row.id)}`) })
-        items.push({ label: 'Request correction', icon: <Pencil size={14} />, onClick: () => navigateTo(`/app/attendance/corrections?record=${encodeURIComponent(row.id)}`) })
-      }
-      if (row.status === 'Pending') {
-        items.push({ label: module === 'payroll' ? 'Mark as paid' : 'Approve', icon: <Check size={14} />, onClick: () => onAction(row, 'approve') })
-        items.push({ label: 'Reject', icon: <X size={14} />, onClick: () => onAction(row, 'reject') })
-      }
-      items.push({ label: 'Delete record', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
+      items.push({ label: 'Edit', icon: <Pencil size={14} />, onClick: () => onEdit?.(row) })
+      items.push({ label: 'Delete', icon: <Trash2 size={14} />, destructive: true, onClick: () => onAction(row, 'delete') })
     }
 
     return items.length ? <ActionDropdown actions={items} label={`Actions for ${row.name}`} /> : null
@@ -123,21 +146,21 @@ export default function ModuleDataTable({
 
   if (module === 'attendance')
     return (
-      <table className="hr-table module-table attendance-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Dept</th>
-            <th>Punch in / out</th>
-            <th>Total hours</th>
-            <th>OT</th>
-            <th>Status</th>
-            <th>View loca.</th>
-            <th>View img</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="hr-table module-table attendance-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">S.NO</TableHead>
+            <TableHead>Employee / User</TableHead>
+            <TableHead>Dept</TableHead>
+            <TableHead>Punch In / Out</TableHead>
+            <TableHead>Total Hours</TableHead>
+            <TableHead>OT</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Proof</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row, index) => {
             const times = attendanceTimes(row.detail, row.status)
             const employee = employees.find((item) => `${item.firstName} ${item.lastName}`.toLowerCase() === row.name.toLowerCase())
@@ -145,214 +168,231 @@ export default function ModuleDataTable({
             const checkIn = row.checkInAt ? new Date(row.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : times.checkIn
             const checkOut = row.checkOutAt ? new Date(row.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : times.checkOut
             return (
-              <tr key={row.id}>
-                <td>{index + 1}</td>
-                <td><div className="attendance-employee-cell"><span className="avatar-mini">{initials(row.name)}</span><span><b>{row.name}</b><small>{employee?.email ?? row.id}</small></span></div></td>
-                <td>{row.department}</td>
-                <td><div className="attendance-punch-times"><span>Punch In: {checkIn}</span><small>Punch Out: {checkOut}</small></div></td>
-                <td>{times.hours}</td>
-                <td>{payroll ? `${payroll.overtimeHours}h` : '—'}</td>
-                <td>
-                  <span
-                    className={`status-pill status-${row.status.toLowerCase().replaceAll(' ', '-')}`}
-                  >
-                    <i />
-                    {row.status}
-                  </span>
-                </td>
-                <td><PunchLocationCell location={row.punchLocation} /></td>
-                <td><PunchPhotoCell photo={row.punchPhoto} name={row.name} /></td>
-              </tr>
+              <TableRow key={row.id}>
+                <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+                <TableCell>
+                  <EntityCell
+                    title={row.name}
+                    subtitle={employee?.email ?? row.id}
+                    tags={[{ label: 'INDIVIDUAL', variant: 'gray' }, { label: employee?.dept ?? 'HR', variant: 'green' }]}
+                    avatar={
+                      <Avatar className="h-9 w-9 rounded-lg">
+                        <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
+                          {initials(row.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <AccentCell title={row.department} color="emerald" />
+                </TableCell>
+                <TableCell>
+                  <div className="text-xs font-medium text-slate-700">
+                    <div>In: <span className="font-semibold text-slate-900">{checkIn}</span></div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Out: {checkOut}</div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs font-semibold text-slate-800">{times.hours}</TableCell>
+                <TableCell className="text-xs text-slate-500">{payroll ? `${payroll.overtimeHours}h` : '—'}</TableCell>
+                <TableCell>
+                  <StatusDotBadge status={row.status} />
+                </TableCell>
+                <TableCell><PunchLocationCell location={row.punchLocation} /></TableCell>
+                <TableCell><PunchPhotoCell photo={row.punchPhoto} name={row.name} /></TableCell>
+              </TableRow>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     )
 
   if (module === 'shifts')
     return (
-      <table className="hr-table module-table shift-table">
-        <thead>
-          <tr>
-            <th>Shift name</th>
-            <th>Hours</th>
-            <th>Schedule</th>
-            <th>Employees assigned</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
-                <b className="table-primary-text">{row.name}</b>
-                <small className="table-secondary-text">{row.id}</small>
-              </td>
-              <td>{row.department}</td>
-              <td>{row.detail}</td>
-              <td>{countCell(row)}</td>
-              <td>
-                <span className={`status-pill status-${row.status.toLowerCase()}`}>
-                  <i />
-                  {row.status}
-                </span>
-              </td>
-              <td>{actions(row)}</td>
-            </tr>
+      <Table className="hr-table module-table shift-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">S.NO</TableHead>
+            <TableHead>Shift Name</TableHead>
+            <TableHead>Hours / Dept</TableHead>
+            <TableHead>Schedule</TableHead>
+            <TableHead>Assigned</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={row.id}>
+              <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+              <TableCell>
+                <AccentCell title={row.name} subtitle={row.id} color="emerald" />
+              </TableCell>
+              <TableCell className="text-xs text-slate-700">{row.department}</TableCell>
+              <TableCell className="text-xs text-slate-600 font-mono">{row.detail}</TableCell>
+              <TableCell className="text-xs font-semibold text-slate-800">{countCell(row)} staff</TableCell>
+              <TableCell>
+                <StatusDotBadge status={row.status} />
+              </TableCell>
+              <TableCell>{actions(row)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     )
 
   if (module === 'departments')
     return (
-      <table className="hr-table module-table department-table">
-        <thead>
-          <tr>
-            <th>Department</th>
-            <th>Employees</th>
-            <th>Active employees</th>
-            <th>Open positions</th>
-            <th>Manager</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
-                <b className="table-primary-text">{row.name}</b>
-                <small className="table-secondary-text">{row.id}</small>
-              </td>
-              <td>{departmentCount(row.name)}</td>
-              <td>{employees.filter((employee) => (employee.dept === row.name || (row.name === 'People & Culture' && employee.dept === 'HR')) && employee.status === 'Active').length}</td>
-              <td>—</td>
-              <td>{departmentManagers[row.name] ?? row.department ?? 'Unassigned'}</td>
-              <td>{row.detail}</td>
-              <td>
-                <span className={`status-pill status-${row.status.toLowerCase()}`}>
-                  <i />
-                  {row.status}
-                </span>
-              </td>
-              <td>{actions(row)}</td>
-            </tr>
+      <Table className="hr-table module-table department-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">S.NO</TableHead>
+            <TableHead>Department</TableHead>
+            <TableHead>Manager</TableHead>
+            <TableHead>Total Staff</TableHead>
+            <TableHead>Active</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={row.id}>
+              <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+              <TableCell>
+                <AccentCell
+                  title={row.name}
+                  subtitle={row.id}
+                  color="emerald"
+                />
+              </TableCell>
+              <TableCell className="text-xs font-medium text-slate-700">
+                {departmentManagers[row.name] ?? row.department ?? 'Unassigned'}
+              </TableCell>
+              <TableCell className="text-xs font-semibold text-slate-800">{departmentCount(row.name)}</TableCell>
+              <TableCell className="text-xs text-emerald-700 font-semibold">
+                {employees.filter((employee) => (employee.dept === row.name || (row.name === 'People & Culture' && employee.dept === 'HR')) && employee.status === 'Active').length}
+              </TableCell>
+              <TableCell className="text-xs text-slate-500">{row.detail}</TableCell>
+              <TableCell>
+                <StatusDotBadge status={row.status} />
+              </TableCell>
+              <TableCell>{actions(row)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     )
 
   if (module === 'designations')
     return (
-      <table className="hr-table module-table designation-table">
-        <thead>
-          <tr>
-            <th>Designation</th>
-            <th>Department</th>
-            <th>Employee count</th>
-            <th>Level</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
-                <b className="table-primary-text">{row.name}</b>
-                <small className="table-secondary-text">{row.id}</small>
-              </td>
-              <td>{row.department}</td>
-              <td>{countCell(row)}</td>
-              <td>{row.detail.split('·')[0]?.trim() || '—'}</td>
-              <td>
-                <span className={`status-pill status-${row.status.toLowerCase()}`}>
-                  <i />
-                  {row.status}
-                </span>
-              </td>
-              <td>{actions(row)}</td>
-            </tr>
+      <Table className="hr-table module-table designation-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">S.NO</TableHead>
+            <TableHead>Designation</TableHead>
+            <TableHead>Department</TableHead>
+            <TableHead>Staff Count</TableHead>
+            <TableHead>Level</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={row.id}>
+              <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+              <TableCell>
+                <AccentCell
+                  title={row.name}
+                  subtitle={row.id}
+                  color="blue"
+                />
+              </TableCell>
+              <TableCell className="text-xs text-slate-700">{row.department}</TableCell>
+              <TableCell className="text-xs font-semibold text-slate-800">{countCell(row)}</TableCell>
+              <TableCell className="text-xs text-slate-500">{row.detail.split('·')[0]?.trim() || '—'}</TableCell>
+              <TableCell>
+                <StatusDotBadge status={row.status} />
+              </TableCell>
+              <TableCell>{actions(row)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     )
 
   if (module === 'payroll')
     return (
-      <table className="hr-table module-table payroll-table">
-        <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Salary</th>
-            <th>Pay period</th>
-            <th>Payment date</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
+      <Table className="hr-table module-table payroll-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">S.NO</TableHead>
+            <TableHead>Employee</TableHead>
+            <TableHead>Gross / Detail</TableHead>
+            <TableHead>Pay Period</TableHead>
+            <TableHead>Payment Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={row.id}>
+              <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+              <TableCell>
                 <PersonCell row={row} />
-              </td>
-              <td className="table-primary-text">{row.detail}</td>
-              <td>{row.date}</td>
-              <td>
+              </TableCell>
+              <TableCell className="font-semibold text-slate-900 text-xs">{row.detail}</TableCell>
+              <TableCell className="text-xs text-slate-600">{row.date}</TableCell>
+              <TableCell className="text-xs text-slate-500">
                 {['Processed', 'Paid', 'Approved'].includes(row.status)
                   ? 'Oct 01, 2026'
                   : 'Not scheduled'}
-              </td>
-              <td>
-                <span className={`status-pill status-${status(row.status).toLowerCase()}`}>
-                  <i />
-                  {status(row.status)}
-                </span>
-              </td>
-              <td>{actions(row)}</td>
-            </tr>
+              </TableCell>
+              <TableCell>
+                <StatusDotBadge status={status(row.status)} />
+              </TableCell>
+              <TableCell>{actions(row)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     )
 
   return (
-    <table className="hr-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Department / details</th>
-          <th>Date</th>
-          <th>Details</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.id}>
-            <td>
+    <Table className="hr-table">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-14">S.NO</TableHead>
+          <TableHead>Name / Entity</TableHead>
+          <TableHead>Department</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Details</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row, index) => (
+          <TableRow key={row.id}>
+            <TableCell className="text-xs font-semibold text-slate-500">{index + 1}</TableCell>
+            <TableCell>
               <PersonCell row={row} />
-            </td>
-            <td>{row.department}</td>
-            <td>{row.date}</td>
-            <td>{row.detail}</td>
-            <td>
-              <span
-                className={`status-pill status-${row.status.toLowerCase().replaceAll(' ', '-')}`}
-              >
-                <i />
-                {status(row.status)}
-              </span>
-            </td>
-            <td>{actions(row)}</td>
-          </tr>
+            </TableCell>
+            <TableCell>
+              <AccentCell title={row.department} color="emerald" />
+            </TableCell>
+            <TableCell className="text-xs text-slate-600">{row.date}</TableCell>
+            <TableCell className="text-xs text-slate-500">{row.detail}</TableCell>
+            <TableCell>
+              <StatusDotBadge status={status(row.status)} />
+            </TableCell>
+            <TableCell>{actions(row)}</TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   )
 }

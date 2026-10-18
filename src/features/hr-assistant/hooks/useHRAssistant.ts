@@ -50,7 +50,7 @@ export function useHRAssistant() {
   const requestSequence = useRef(0)
   const inFlight = useRef(false)
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, portal } = useAuth()
   const send = async (text: string): Promise<boolean> => {
     const value = text.trim()
     if (!value || inFlight.current) return false
@@ -60,7 +60,7 @@ export function useHRAssistant() {
     setMessages((current) => [...current, { id: `${id}-user`, role: 'user', text: value }])
     inFlight.current = true
     setTyping(true)
-    const employeePortal = isEmployeePortalPath(location.pathname)
+    const employeePortal = portal === 'employee' || isEmployeePortalPath(location.pathname)
     const portalMode = employeePortal ? 'employee' : 'admin'
     let responseMessage: ChatMessage
     try {

@@ -1,2 +1,8 @@
 export { DataTable } from './data-table'
 export { Pagination } from './pagination'
+export { TableToolbar, type TableToolbarProps } from './TableToolbar'
+export { TablePagination, type TablePaginationProps } from './TablePagination'
+export { TableFilterTabs, type TableFilterTab } from './TableFilterTabs'
+export { StatusDotBadge, type StatusVariant } from './StatusDotBadge'
+export { AccentCell } from './AccentCell'
+export { EntityCell } from './EntityCell'

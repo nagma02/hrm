@@ -46,7 +46,8 @@ describe('Add Employee flow', () => {
     expect(screen.getByText('Nagma Siddiqui')).toBeInTheDocument()
     await user.type(screen.getByPlaceholderText('Search employees, id, email...'), 'E-NEW-249')
     expect(screen.getByText('Nagma Siddiqui')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'View Nagma' }))
+    await user.click(screen.getByRole('button', { name: 'Actions for Nagma Siddiqui' }))
+    await user.click(screen.getByRole('menuitem', { name: 'View details' }))
     expect(window.location.pathname).toBe('/app/employees/E-NEW-249')
   })
 

@@ -9,6 +9,7 @@ import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
 import { toast } from 'sonner'
+import { ToolbarSelect } from '@/components/tables/ToolbarSelect'
 
 type View = 'Current' | 'Archive'
 type ReadFilter = 'All' | 'Unread'
@@ -108,16 +109,10 @@ export default function AnnouncementsPage() {
                   {item}<span>{item === 'Unread' ? unreadCount : current.length}</span>
                 </button>
               ))}
-              <label className="sr-only" htmlFor="announcement-category">Filter by category</label>
-              <select id="announcement-category" aria-label="Filter by category" value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option>All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <label className="sr-only" htmlFor="announcement-priority">Filter by priority</label>
-              <select id="announcement-priority" aria-label="Filter by priority" value={priority} onChange={(event) => setPriority(event.target.value)}>
-                <option>All priorities</option><option>High</option><option>Normal</option><option>Low</option>
-              </select>
+              <ToolbarSelect ariaLabel="Filter by category" value={category} onValueChange={setCategory} options={['All categories', ...categories].map((item) => ({ label: String(item), value: String(item) }))} />
+              <ToolbarSelect ariaLabel="Filter by priority" value={priority} onValueChange={setPriority} options={['All priorities', 'High', 'Normal', 'Low'].map((item) => ({ label: String(item), value: String(item) }))} />
             </div>
-            <div className="employee-announcement-tools"><label className="employee-announcement-search"><Search size={15} /><span className="sr-only">Search announcements</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search announcements…" /></label><label className="sr-only" htmlFor="announcement-sort">Sort announcements</label><select id="announcement-sort" aria-label="Sort announcements" value={sortOrder} onChange={(event) => setSortOrder(event.target.value as SortOrder)}><option>Newest first</option><option>Oldest first</option></select></div>
+            <div className="employee-announcement-tools"><label className="employee-announcement-search"><Search size={15} /><span className="sr-only">Search announcements</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search announcements…" /></label><ToolbarSelect ariaLabel="Sort announcements" value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)} options={['Newest first', 'Oldest first'].map((item) => ({ label: String(item), value: String(item) }))} /></div>
           </div>
 
           {visible.length ? <div className="employee-announcement-list">

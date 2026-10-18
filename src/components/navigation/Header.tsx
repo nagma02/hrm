@@ -21,6 +21,20 @@ function formatRole(role?: string) {
   return role?.replaceAll('_', ' ').replaceAll('-', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+const titleCase = (value: string) => value.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+
+/** "Workspace / Employees / Add New" instead of a bare last URL segment such as "Create" or "E 1001". */
+function breadcrumbTrail(pathname: string) {
+  const segments = pathname.split('/').filter(Boolean).slice(1)
+  const section = titleCase(segments[0] ?? 'dashboard')
+  const leaf = segments.length > 1 ? segments.at(-1) ?? '' : ''
+  if (!leaf) return { section, page: '' }
+  if (leaf === 'create') return { section, page: 'Add New' }
+  if (leaf === 'edit') return { section, page: 'Edit' }
+  if (/\d/.test(leaf)) return { section, page: 'Details' }
+  return { section, page: titleCase(leaf) }
+}
+
 export default function Header({ portalMode = 'admin' }: { portalMode?: 'admin' | 'employee' }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -38,8 +52,7 @@ export default function Header({ portalMode = 'admin' }: { portalMode?: 'admin' 
     window.addEventListener('hrm:mobile-sidebar-closed', closeMobileSidebar)
     return () => window.removeEventListener('hrm:mobile-sidebar-closed', closeMobileSidebar)
   }, [])
-  const routeTitle = pathname.split('/').filter(Boolean).at(-1)?.replace(/-/g, ' ') || 'Dashboard'
-  const title = routeTitle.replace(/\b\w/g, (letter) => letter.toUpperCase())
+  const { section, page } = breadcrumbTrail(pathname)
   const profileName = portalMode === 'employee'
     ? (employee ? `${employee.firstName} ${employee.lastName}` : user?.name || 'Employee')
     : user?.name || 'Employee'
@@ -70,7 +83,7 @@ export default function Header({ portalMode = 'admin' }: { portalMode?: 'admin' 
   return <>
     <div className="topbar">
       <button className="icon-button menu-toggle" onClick={() => { if (window.matchMedia('(max-width: 1100px)').matches) { setMobile(!mobile); window.dispatchEvent(new Event('hrm:mobile-sidebar-toggle')) } else window.dispatchEvent(new Event('hrm:sidebar-toggle')) }} aria-label="Toggle navigation">{mobile ? <X size={18}/> : <Menu size={18}/>}</button>
-      <div className="crumbs"><span>Workspace</span><b>/</b><strong>{title}</strong></div>
+      <div className="crumbs"><span>Workspace</span><b>/</b>{page ? <><span>{section}</span><b>/</b><strong>{page}</strong></> : <strong>{section}</strong>}</div>
       <div className="topbar-right">
         <OrganizationSwitcher />
         <div className="global-search z-[99999]"><Search size={16}/><input aria-label="Search HRM" placeholder="Search anything..." value={query} onChange={(event) => setQuery(event.target.value)}/><kbd>⌘ K</kbd>{query && <div className="search-results z-[99999]">{results.map((result) => <button key={result.id} onClick={() => { setQuery(''); navigateTo(result.path) }}><span className="avatar-mini">{result.kind.slice(0, 2).toUpperCase()}</span><span>{result.label}<small>{result.kind} · {result.detail}</small></span></button>)}{!results.length && <p>No matching records</p>}</div>}</div>

@@ -42,7 +42,7 @@ export default function DesignationDistribution({ rows }: { rows: ModuleRow[] })
                   outerRadius="88%"
                   paddingAngle={4}
                   cornerRadius={5}
-                  stroke="#fffefa"
+                  stroke="#FFFFFF"
                   strokeWidth={3}
                 >
                   {data.map((entry, index) => (
@@ -51,10 +51,10 @@ export default function DesignationDistribution({ rows }: { rows: ModuleRow[] })
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    border: '1px solid #d9d8cc',
+                    border: '1px solid #CFEBD7',
                     borderRadius: 9,
-                    backgroundColor: '#fffefa',
-                    boxShadow: '0 8px 22px rgb(53 55 47 / 10%)',
+                    backgroundColor: '#FFFFFF',
+                    boxShadow: '0 8px 22px rgb(27 54 43 / 10%)',
                   }}
                   formatter={(value) => [`${Number(value)} employees`, 'Headcount']}
                   labelFormatter={(label, payload) =>

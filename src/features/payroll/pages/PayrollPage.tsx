@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react'
-import { ArrowRight, Download, Search } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Banknote, CircleCheckBig, Download, Hourglass, Search, Send, Wallet } from 'lucide-react'
+import { StatCard } from '@/components/ui/stat-card'
 import { ActionDropdown } from '@/components/ui/action-dropdown'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
 import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
@@ -70,23 +80,67 @@ export function PayrollPage() {
     const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')
     const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = `payroll-${period.toLowerCase().replace(' ', '-')}.csv`; link.click(); URL.revokeObjectURL(link.href)
   }
-  return <PageContainer><main className="payroll-page">
+  return <PageContainer><div className="payroll-page">
     <PageHeader title="Payroll Management" subtitle="Generate, process, and manage employee payroll with dynamic approval workflow." actions={<div className="payroll-header-actions"><button className="button" onClick={() => navigateTo('/app/payroll/approvals')}>My Approvals</button><button className="button primary" onClick={validate}>Validate</button></div>} />
     <div className="payroll-controls"><label>Month<select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item) => <option key={item}>{item}</option>)}</select></label><label>Year<select value={year} onChange={(event) => setYear(event.target.value)}>{['2026', '2025', '2024'].map((item) => <option key={item}>{item}</option>)}</select></label><span className="payroll-period-status">{period} · Monthly cycle</span></div>
     <section className="payroll-summary-grid" aria-label="Payroll overview">
-      {[['Total Gross', money(gross)], ['Total Net', money(net)], ['Pending Approval', String(pendingCount)], ['Approved', String(approvedCount)], ['Published', String(publishedCount)], ['Paid', String(paidCount)]].map(([label, value]) => <article className="payroll-summary-card" key={label}><span>{label}</span><strong>{value}</strong><small>{period}</small></article>)}
+      {([['Total Gross', money(gross), Wallet], ['Total Net', money(net), Banknote], ['Pending Approval', String(pendingCount), Hourglass], ['Approved', String(approvedCount), BadgeCheck], ['Published', String(publishedCount), Send], ['Paid', String(paidCount), CircleCheckBig]] as const).map(([label, value, Icon]) => <StatCard key={label} label={label} value={value} hint={period} icon={<Icon size={18} />} />)}
     </section>
     <section className="panel payroll-records-panel"><div className="payroll-records-head"><div><span className="eyebrow">PAY RUN · {period.toUpperCase()}</span><h2>Employee payroll records</h2><p>Review salary, deductions, and payment status for each employee.</p></div></div>
       <div className="payroll-filters"><select aria-label="Filter payroll status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1) }}>{['All Status', 'Draft', 'Processing', 'Pending Approval', 'Approved', 'Simulated', 'Paid', 'Failed'].map((item) => <option key={item} value={item === 'All Status' ? 'All' : item}>{item}</option>)}</select><label className="table-search"><Search size={15}/><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search name / ID" /></label><button className="button" onClick={() => setQuery(query.trim())}>Search</button><span>{filtered.length} records</span></div>
       <div className="payroll-generation-actions"><button onClick={processSingle}>+ Generate Single</button><button onClick={process}>+ Generate All</button><button onClick={process}>↻ Regenerate All</button><button onClick={exportCsv}><Download size={14} /> Export Excel</button></div>
-      <div className="table-scroll"><table className="hr-table payroll-records-table payroll-management-table"><thead><tr><th><input type="checkbox" aria-label="Select all payroll records" checked={filtered.length > 0 && filtered.every((record) => selectedIds.includes(record.id))} onChange={(event) => setSelectedIds(event.target.checked ? filtered.map((record) => record.id) : [])} /></th><th>#</th><th>Employee</th><th>Dept</th><th>Gross</th><th>Days</th><th>Earned</th><th>Deductions</th><th>Net</th><th>Workflow</th><th>Payment</th><th>Actions</th></tr></thead><tbody>{visibleRecords.map((record, index) => <tr key={record.id}><td><input type="checkbox" aria-label={`Select payroll for ${record.employeeName}`} checked={selectedIds.includes(record.id)} onChange={(event) => setSelectedIds((items) => event.target.checked ? [...items, record.id] : items.filter((id) => id !== record.id))} /></td><td>{(page - 1) * rowsPerPage + index + 1}</td><td><strong>{record.employeeName}</strong><small>{record.employeeId}</small></td><td>{record.department}</td><td>{money(earningTotal(record))}</td><td>{record.paidDays} / {record.workingDays}</td><td>{money(earningTotal(record))}</td><td>{money(deductionTotal(record))}</td><td className="table-primary-text">{money(netSalary(record))}</td><td><span className={`status-pill status-${record.status.toLowerCase().replaceAll(' ', '-')}`}><i />{record.status}</span></td><td>{record.status === 'Simulated' || record.status === 'Paid' ? 'Paid' : '—'}</td><td><ActionDropdown label={`Actions for ${record.employeeName}`} actions={[
-        { label: 'View details', icon: <ArrowRight size={13} />, onClick: () => navigateTo(`/app/payroll/${record.id}`) },
-        ...(record.status === 'Processing' ? [{ label: payrollSettings.workflow.requireApproval ? 'Submit for approval' : 'Complete without approval', onClick: () => submitForReview(record.id) }] : []),
-        ...(record.status === 'Pending Approval' ? [{ label: 'Approve', onClick: () => update(record.id, 'Approved') }] : []),
-        ...(record.status === 'Approved' ? [{ label: 'Record simulated payment', onClick: () => update(record.id, 'Simulated') }] : []),
-      ]} /></td></tr>)}</tbody></table>{!filtered.length && <p className="payroll-empty">No payroll records found</p>}</div>
+      <div className="table-scroll">
+        <Table className="hr-table payroll-records-table payroll-management-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead><input type="checkbox" aria-label="Select all payroll records" checked={filtered.length > 0 && filtered.every((record) => selectedIds.includes(record.id))} onChange={(event) => setSelectedIds(event.target.checked ? filtered.map((record) => record.id) : [])} /></TableHead>
+              <TableHead>#</TableHead>
+              <TableHead>Employee</TableHead>
+              <TableHead>Dept</TableHead>
+              <TableHead>Gross</TableHead>
+              <TableHead>Days</TableHead>
+              <TableHead>Earned</TableHead>
+              <TableHead>Deductions</TableHead>
+              <TableHead>Net</TableHead>
+              <TableHead>Workflow</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleRecords.map((record, index) => (
+              <TableRow key={record.id}>
+                <TableCell><input type="checkbox" aria-label={`Select payroll for ${record.employeeName}`} checked={selectedIds.includes(record.id)} onChange={(event) => setSelectedIds((items) => event.target.checked ? [...items, record.id] : items.filter((id) => id !== record.id))} /></TableCell>
+                <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                <TableCell><strong>{record.employeeName}</strong><small className="block text-xs text-muted-foreground">{record.employeeId}</small></TableCell>
+                <TableCell>{record.department}</TableCell>
+                <TableCell>{money(earningTotal(record))}</TableCell>
+                <TableCell>{record.paidDays} / {record.workingDays}</TableCell>
+                <TableCell>{money(earningTotal(record))}</TableCell>
+                <TableCell>{money(deductionTotal(record))}</TableCell>
+                <TableCell className="table-primary-text font-semibold">{money(netSalary(record))}</TableCell>
+                <TableCell><span className={`status-pill status-${record.status.toLowerCase().replaceAll(' ', '-')}`}><i />{record.status}</span></TableCell>
+                <TableCell>{record.status === 'Simulated' || record.status === 'Paid' ? 'Paid' : '—'}</TableCell>
+                <TableCell>
+                  <ActionDropdown
+                    label={`Actions for ${record.employeeName}`}
+                    actions={[
+                      { label: 'View details', icon: <ArrowRight size={13} />, onClick: () => navigateTo(`/app/payroll/${record.id}`) },
+                      ...(record.status === 'Processing' ? [{ label: payrollSettings.workflow.requireApproval ? 'Submit for approval' : 'Complete without approval', onClick: () => submitForReview(record.id) }] : []),
+                      ...(record.status === 'Pending Approval' ? [{ label: 'Approve', onClick: () => update(record.id, 'Approved') }] : []),
+                      ...(record.status === 'Approved' ? [{ label: 'Record simulated payment', onClick: () => update(record.id, 'Simulated') }] : []),
+                    ]}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {!filtered.length && <p className="payroll-empty">No payroll records found</p>}
+      </div>
+
       <footer className="payroll-management-footer"><span>{filtered.length ? `Showing ${(page - 1) * rowsPerPage + 1}–${Math.min(page * rowsPerPage, filtered.length)} of ${filtered.length}` : 'No records'} <label>Rows per page: <select value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1) }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label></span><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Prev</button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button></div></footer>
       <footer className="payroll-table-footer">Payroll run status: {current.length > 0 && current.every((item) => item.status === 'Simulated' || item.status === 'Paid') ? 'Simulated payment complete' : current.some((item) => item.status === 'Pending Approval') ? 'Pending approval' : current.some((item) => item.status === 'Processing') ? 'Processing' : 'In progress'} <span>Demo data and simulated status only. No bank transfer is initiated.</span></footer>
     </section>
-  </main></PageContainer>
+  </div></PageContainer>
 }

@@ -3,6 +3,15 @@ import { format, isValid, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import PageContainer from '@/features/shared/PageContainer'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
 import { sanitizeText } from '@/utils/sanitize-text'
 import { hrContentStore, type HRHoliday } from '../data/hrContentStore'
 import { useHRContent } from '../hooks/useHRContent'
@@ -61,7 +70,43 @@ export default function HolidaysPage() {
     <section className="panel holiday-admin-panel">
       <header className="holiday-admin-heading"><h1>All Holidays</h1><div><button className="button primary" onClick={() => openForm()}><Plus size={15} /> Add Holiday</button><button className="button holiday-more-button" aria-label="Holiday actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><MoreVertical size={17} /></button>{menuOpen && <div className="holiday-actions-menu"><button onClick={() => { exportCsv(filtered); setMenuOpen(false) }}>Export holidays</button></div>}</div></header>
       <div className="holiday-table-tools"><label>Show<select aria-label="Holidays per page" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1) }}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select> entries per page</label><label>Search:<input aria-label="Search holidays" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search holidays..." /></label></div>
-      <div className="table-scroll holiday-admin-table-scroll"><table className="hr-table holiday-admin-table"><thead><tr><th># ↕</th><th>Title</th><th>Start Date</th><th>End Date</th><th>Duration</th><th>Type</th><th>Details</th><th>Action</th></tr></thead><tbody>{visible.map((holiday, index) => <tr key={holiday.id}><td>{(page - 1) * pageSize + index + 1}</td><td><button className="holiday-title-button" onClick={() => setDetails(holiday)}>{holiday.name}</button></td><td>{showDate(holiday.date)}</td><td>{showDate(holiday.endDate || holiday.date)}</td><td><span className="holiday-duration-pill">{holiday.duration || 'full_day'}</span></td><td><span className={`holiday-type-pill holiday-type-${holiday.type.toLowerCase().replaceAll(' ', '-')}`}>{typeLabel(holiday.type)}</span></td><td>{holiday.description || '—'}</td><td><div className="holiday-icon-actions"><button aria-label={`Edit ${holiday.name}`} onClick={() => openForm(holiday)}><Pencil size={14} /></button><button aria-label={`Delete ${holiday.name}`} onClick={() => remove(holiday)}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table>{!visible.length && <div className="empty-state"><b>{holidays.length ? 'No matching holidays' : 'No holidays yet'}</b><span>{holidays.length ? 'Try a different search.' : 'Add a holiday to publish it to employee calendars.'}</span></div>}</div>
+      <div className="table-scroll holiday-admin-table-scroll">
+        <Table className="hr-table holiday-admin-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead># ↕</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Details</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visible.map((holiday, index) => (
+              <TableRow key={holiday.id}>
+                <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                <TableCell><button className="holiday-title-button font-medium cursor-pointer" onClick={() => setDetails(holiday)}>{holiday.name}</button></TableCell>
+                <TableCell>{showDate(holiday.date)}</TableCell>
+                <TableCell>{showDate(holiday.endDate || holiday.date)}</TableCell>
+                <TableCell><span className="holiday-duration-pill">{holiday.duration || 'full_day'}</span></TableCell>
+                <TableCell><span className={`holiday-type-pill holiday-type-${holiday.type.toLowerCase().replaceAll(' ', '-')}`}>{typeLabel(holiday.type)}</span></TableCell>
+                <TableCell>{holiday.description || '—'}</TableCell>
+                <TableCell>
+                  <div className="holiday-icon-actions flex items-center gap-2">
+                    <button aria-label={`Edit ${holiday.name}`} onClick={() => openForm(holiday)}><Pencil size={14} /></button>
+                    <button aria-label={`Delete ${holiday.name}`} onClick={() => remove(holiday)}><Trash2 size={14} /></button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {!visible.length && <div className="empty-state"><b>{holidays.length ? 'No matching holidays' : 'No holidays yet'}</b><span>{holidays.length ? 'Try a different search.' : 'Add a holiday to publish it to employee calendars.'}</span></div>}
+      </div>
+
       <footer className="holiday-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={17} /></button>{Array.from({ length: pageCount }, (_, index) => <button key={index} className={page === index + 1 ? 'active' : ''} onClick={() => setPage(index + 1)}>{index + 1}</button>)}<button aria-label="Next page" disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}><ChevronRight size={17} /></button></div></footer>
     </section>
     {editing !== null && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setEditing(null)}><form className="form-modal" onSubmit={submit}><button type="button" className="modal-close" aria-label="Close" onClick={() => setEditing(null)}>×</button><p className="eyebrow">HOLIDAY CALENDAR</p><h2>{editing.id ? 'Edit holiday' : 'Add holiday'}</h2><label>Holiday name<input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Start date<input type="date" required value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label>End date<input type="date" value={form.endDate || ''} onChange={(event) => setForm({ ...form, endDate: event.target.value })} /></label><label>Duration<select value={form.duration || 'full_day'} onChange={(event) => setForm({ ...form, duration: event.target.value as HRHoliday['duration'] })}><option value="full_day">Full day</option><option value="first_half">First half</option><option value="second_half">Second half</option></select></label><label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}><option>Company holiday</option><option>Regional holiday</option><option>Optional holiday</option></select></label><label>Description<textarea maxLength={500} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label><div className="modal-actions"><button type="button" className="button" onClick={() => setEditing(null)}>Cancel</button><button className="button primary" type="submit">Save holiday</button></div></form></div>}

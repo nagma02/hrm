@@ -28,7 +28,27 @@ export { Select } from './select'
 export { StatCard } from './stat-card'
 export { StatusBadge } from './status-badge'
 export { Switch } from './switch'
-export { Tabs } from './tabs'
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from './table'
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from './dropdown-menu'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 export { Textarea } from './textarea'
 export { TimePicker } from './time-picker'
-export { Tooltip } from './tooltip'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip'
+
+export { Skeleton, ChartCardSkeleton, StatCardSkeleton, TableSkeleton, ListSkeleton, PageSkeleton } from './skeleton'

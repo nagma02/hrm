@@ -39,10 +39,10 @@ export function LeaveApprovalPage() {
     try {
       if (status === 'Approved') {
         await leaveService.updateStatus(row.id, 'Approved', { decisionBy: user?.name ?? 'HR Admin' })
-        toast.success('Leave request approved.')
+        toast.success('Leave approved', { description: 'The employee has been notified.' })
       } else {
         await leaveService.updateStatus(row.id, 'Rejected', { decisionBy: user?.name ?? 'HR Admin', decisionComment: 'Rejected from approvals queue.' })
-        toast.success('Leave request rejected.')
+        toast.success('Leave rejected', { description: 'The employee has been notified.' })
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to update this leave request.')
@@ -51,7 +51,7 @@ export function LeaveApprovalPage() {
 
   return (
     <PageContainer>
-      <main className="leave-page">
+      <div className="leave-page">
         <section className="panel leave-panel">
           <div className="leave-requests-heading">
             <div>
@@ -71,7 +71,7 @@ export function LeaveApprovalPage() {
           />
           <LeaveRequestTable rows={visibleRows} onStatusChange={onStatusChange} />
         </section>
-      </main>
+      </div>
     </PageContainer>
   )
 }

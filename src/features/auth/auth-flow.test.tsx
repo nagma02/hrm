@@ -193,6 +193,41 @@ describe('authentication portal flow', () => {
     )
   })
 
+  it.each([
+    ['966570490448', 'Saudi Arabia', '+966570490448'],
+    ['+447911123456', 'United Kingdom', '+447911123456'],
+    ['18765551234', 'Jamaica', '+18765551234'],
+    ['919876543210', 'India', '+919876543210'],
+  ])('shows the matching country flag while typing %s', async (typed, country, recipient) => {
+    const user = userEvent.setup()
+    const contextValue = {
+      session: null,
+      user: null,
+      portal: 'admin' as const,
+      setPortal: vi.fn(),
+      isAuthenticated: false,
+      isInitializing: false,
+      acceptSession: vi.fn(),
+      updateUser: vi.fn(),
+      signOut: vi.fn(),
+      hasPermission: vi.fn(() => false),
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthContext.Provider value={contextValue}>
+          <LoginForm />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('Email or mobile number'), typed)
+    expect(screen.getByRole('button', { name: new RegExp(`^Country: ${country} \\(`) })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /send otp via sms/i }))
+    await waitFor(() => expect(authMocks.requestPhoneLoginOtp).toHaveBeenCalledWith(recipient))
+  })
+
   it('restores the typed login values after visiting legal policy pages and returning', async () => {
     const user = userEvent.setup()
     const contextValue = {
@@ -413,14 +448,14 @@ describe('authentication portal flow', () => {
     expect(screen.getByText('Workspace')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /employees/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /attendance/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^attendance$/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /admin user/i }))
     expect(screen.getByText('Admin User')).toBeInTheDocument()
     expect(screen.getByTestId('pathname')).toHaveTextContent('/app/dashboard')
   })
 
-  it('loads the employee dashboard route for employee users', () => {
+  it('loads the employee dashboard route for employee users', async () => {
     const employeeSession: AuthSession = {
       ...adminSession,
       user: { ...adminSession.user, role: 'EMPLOYEE', globalRole: undefined, permissions: [] },
@@ -445,11 +480,11 @@ describe('authentication portal flow', () => {
       </AuthContext.Provider>,
     )
 
-    expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
-    expect(screen.getByText(/attendance breakdown/i)).toBeInTheDocument()
+    expect(await screen.findByText(/welcome back/i, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText(/attendance breakdown/i, {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
-  it('keeps the employee dashboard on its own route instead of redirecting to the admin dashboard', () => {
+  it('keeps the employee dashboard on its own route instead of redirecting to the admin dashboard', async () => {
     const adminEmployeeSession: AuthSession = {
       ...adminSession,
       user: {
@@ -483,6 +518,6 @@ describe('authentication portal flow', () => {
     )
 
     expect(window.location.pathname).toBe('/employee/dashboard')
-    expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
+    expect(await screen.findByText(/welcome back/i, {}, { timeout: 5000 })).toBeInTheDocument()
   })
 })

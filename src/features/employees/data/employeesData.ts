@@ -18,6 +18,8 @@ export type Employee = {
   dateOfBirth?: string
   gender?: string
   address?: string
+  photoUrl?: string
+  notes?: string
 }
 
 export const employees: Employee[] = [

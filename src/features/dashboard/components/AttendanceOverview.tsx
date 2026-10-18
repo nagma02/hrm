@@ -62,11 +62,11 @@ export default function AttendanceOverview() {
             <XAxis dataKey="day" tickFormatter={(day: string) => chartWidth < 520 ? day.slice(0, 3) : day} interval={chartWidth < 520 ? 'preserveStartEnd' : 0} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: chartWidth < 520 ? 9 : 10 }} dy={9} />
             <YAxis yAxisId="employees" domain={[0, maxAttendance]} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: 12 }} />
             <YAxis yAxisId="events" orientation="right" domain={[0, maxAttendance]} hide />
-            <Tooltip content={ChartTooltip} cursor={{ stroke: '#d8e4dc', strokeDasharray: '4 4' }} animationDuration={180} />
-            <Legend verticalAlign="top" align="right" height={32} iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: '#6e7a72', paddingBottom: 5 }} />
-            <Line yAxisId="employees" type="monotone" dataKey="present" name="Present" stroke="var(--chart-present)" strokeWidth={2.7} dot={{ r: 3.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 2 }} />
-            <Line yAxisId="events" type="monotone" dataKey="absent" name="Absent" stroke="var(--chart-absent)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-absent)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-absent)', stroke: '#fffefa', strokeWidth: 2 }} />
-            <Line yAxisId="events" type="monotone" dataKey="late" name="Late" stroke="var(--chart-late)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-late)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-late)', stroke: '#fffefa', strokeWidth: 2 }} />
+            <Tooltip content={ChartTooltip} cursor={{ stroke: '#CFEBD7', strokeDasharray: '4 4' }} animationDuration={180} />
+            <Legend verticalAlign="top" align="right" height={32} iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: '#2A5243', paddingBottom: 5 }} />
+            <Line yAxisId="employees" type="monotone" dataKey="present" name="Present" stroke="var(--chart-present)" strokeWidth={2.7} dot={{ r: 3.5, fill: 'var(--chart-present)', stroke: '#FFFFFF', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-present)', stroke: '#FFFFFF', strokeWidth: 2 }} />
+            <Line yAxisId="events" type="monotone" dataKey="absent" name="Absent" stroke="var(--chart-absent)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-absent)', stroke: '#FFFFFF', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-absent)', stroke: '#FFFFFF', strokeWidth: 2 }} />
+            <Line yAxisId="events" type="monotone" dataKey="late" name="Late" stroke="var(--chart-late)" strokeWidth={2.2} dot={{ r: 3.5, fill: 'var(--chart-late)', stroke: '#FFFFFF', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-late)', stroke: '#FFFFFF', strokeWidth: 2 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

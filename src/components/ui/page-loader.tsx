@@ -1,5 +1,5 @@
-import { LoadingSpinner } from './loading-spinner'
+import { PageSkeleton } from './skeleton'
 
 export function PageLoader() {
-  return <div className="page-loader"><LoadingSpinner /></div>
+  return <div className="page-loader"><PageSkeleton /></div>
 }

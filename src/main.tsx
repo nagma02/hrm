@@ -1,3 +1,4 @@
+import './utils/install-storage-fallback'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

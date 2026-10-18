@@ -14,6 +14,8 @@ import { attendanceCorrectionApi } from '@/features/attendance/services/attendan
 import { notificationService } from '@/features/notifications/services/notification.service'
 import { format, isValid, parse } from 'date-fns'
 import { ActionDropdown } from '@/components/ui/action-dropdown'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { StatusDotBadge } from '@/components/tables'
 
 const punchTimePattern = /^(0?[1-9]|1[0-2]):[0-5]\d\s?(AM|PM)$/i
 
@@ -120,16 +122,105 @@ export function AttendanceCorrectionPage({ employeeOnly = false, missingPunchMod
       const haystack = `${item.employee} ${item.employeeId ?? ''} ${item.date} ${item.status}`.toLowerCase()
       return matchesStatus && haystack.includes(appliedRequestSearch.toLowerCase().trim())
     })
-    if (missingPunchMode) return <PageContainer><PageHeader title="Missing Punch Requests" subtitle="Review employee missing punch requests and apply attendance corrections." /><section className="panel data-panel"><form className="attendance-missing-toolbar" onSubmit={(event) => { event.preventDefault(); setAppliedRequestSearch(requestSearch); setAppliedRequestStatus(requestStatus) }}><input aria-label="Search employee, date or status" placeholder="Search employee, date or status" value={requestSearch} onChange={(event) => setRequestSearch(event.target.value)} /><select aria-label="Filter request status" value={requestStatus} onChange={(event) => setRequestStatus(event.target.value)}>{['All status', 'Pending', 'Approved', 'Rejected'].map((item) => <option key={item}>{item}</option>)}</select><button className="button primary" type="submit">Filter</button><button className="button" type="button" onClick={() => { setRequestSearch(''); setRequestStatus('All status'); setAppliedRequestSearch(''); setAppliedRequestStatus('All status') }}>Reset</button></form><div className="table-scroll"><table className="hr-table"><thead><tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Date</th><th>Missing Type</th><th>Status</th><th>Applied On</th><th>Actions</th></tr></thead><tbody>{visibleRequests.map((item) => {
-      const missingType = !item.existingCheckIn && !item.existingCheckOut ? 'Both' : !item.existingCheckIn || item.existingCheckIn === '—' ? 'Punch In' : !item.existingCheckOut || item.existingCheckOut === '—' ? 'Punch Out' : 'Both'
-      const employeeRecord = employeeStore.getById(item.employeeId ?? '')
-      return <tr key={item.id}><td>{item.employee}</td><td>{item.employeeId ?? '—'}</td><td>{employeeRecord?.dept ?? '—'}</td><td>{item.dateKey ?? item.date}</td><td>{missingType}</td><td><span className={`status-pill status-${item.status.toLowerCase()}`}><i />{item.status}</span></td><td>{item.submittedAt ? format(new Date(item.submittedAt), 'yyyy-MM-dd HH:mm') : '—'}</td><td><button className="attendance-view-link" onClick={() => setActiveRequest(item)}>View</button></td></tr>
-    })}</tbody></table>{!visibleRequests.length&&<div className="empty-state"><b>No missing punch requests</b><span>Requests matching these filters will appear here.</span></div>}</div></section>{activeRequest&&<div className="modal-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&setActiveRequest(null)}><section className="modal-card attendance-request-modal" role="dialog" aria-modal="true" aria-labelledby="missing-request-title"><button className="modal-close" aria-label="Close request" onClick={()=>setActiveRequest(null)}>×</button><h2 id="missing-request-title">Missing punch request</h2><dl><div><dt>Employee</dt><dd>{activeRequest.employee} · {activeRequest.employeeId ?? '—'}</dd></div><div><dt>Date</dt><dd>{activeRequest.dateKey ?? activeRequest.date}</dd></div><div><dt>Missing type</dt><dd>{!activeRequest.existingCheckIn && !activeRequest.existingCheckOut ? 'Both' : !activeRequest.existingCheckIn || activeRequest.existingCheckIn === '—' ? 'Punch In' : !activeRequest.existingCheckOut || activeRequest.existingCheckOut === '—' ? 'Punch Out' : 'Both'}</dd></div><div><dt>Existing punch</dt><dd>{activeRequest.existingCheckIn ?? '—'} – {activeRequest.existingCheckOut ?? '—'}</dd></div><div><dt>Requested punch</dt><dd>{activeRequest.checkIn || '—'} – {activeRequest.checkOut || '—'}</dd></div><div><dt>Reason</dt><dd>{activeRequest.reason}</dd></div><div><dt>Status</dt><dd>{activeRequest.status}</dd></div></dl>{activeRequest.status==='Pending'&&<div className="form-actions"><button className="button" disabled={busy} onClick={()=>{void decide(activeRequest.id,'Rejected').then(()=>setActiveRequest(null))}}>Reject</button><button className="button primary" disabled={busy} onClick={()=>{void decide(activeRequest.id,'Approved').then(()=>setActiveRequest(null))}}>Approve &amp; apply</button></div>}</section></div>}</PageContainer>
-    return <PageContainer><PageHeader title="Attendance corrections" subtitle="Review employee requests to correct their time records." actions={<button className="button" onClick={() => navigate('/app/attendance')}>Back to attendance</button>} /><section className="panel data-panel"><div className="panel-head"><div><h2>Correction requests</h2><span>{corrections.filter((item)=>item.status==='Pending').length} pending</span></div></div><div className="table-scroll"><table className="hr-table"><thead><tr><th>Employee</th><th>Date</th><th>Existing time</th><th>Requested time</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody>{corrections.map((item)=><tr key={item.id}><td>{item.employee}</td><td>{item.date}</td><td>{item.existingCheckIn ?? '—'} – {item.existingCheckOut ?? '—'}</td><td>{item.checkIn || '—'} – {item.checkOut || '—'}</td><td>{item.reason}</td><td>{item.status}</td><td><ActionDropdown label={`Actions for ${item.employee}'s correction`} actions={item.status === 'Pending' ? [
-      { label: 'Edit correction', onClick: () => beginEdit(item) },
-      { label: 'Approve', onClick: () => { void decide(item.id, 'Approved') } },
-      { label: 'Reject', destructive: true, onClick: () => { void decide(item.id, 'Rejected') } },
-    ] : [{ label: 'View correction', onClick: () => setActiveRequest(item) }]} /></td></tr>)}</tbody></table>{!corrections.length&&<div className="empty-state"><b>No correction requests</b><span>New employee correction requests will appear here.</span></div>}</div></section>{editingRequest && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setEditingRequest(null)}><form className="modal-card attendance-request-modal" role="dialog" aria-modal="true" aria-labelledby="edit-correction-title" onSubmit={(event) => { void saveEdit(event) }}><button type="button" className="modal-close" aria-label="Close editor" onClick={() => setEditingRequest(null)}>×</button><h2 id="edit-correction-title">Edit attendance correction</h2><p>{editingRequest.employee} · {editingRequest.date}</p><label className="employee-field">Correct check-in<input value={editCheckIn} onChange={(event) => setEditCheckIn(event.target.value)} placeholder="09:00 AM" /></label><label className="employee-field">Correct check-out<input value={editCheckOut} onChange={(event) => setEditCheckOut(event.target.value)} placeholder="05:30 PM" /></label><label className="employee-field">Reason<textarea required minLength={10} maxLength={500} value={editReason} onChange={(event) => setEditReason(event.target.value)} /></label><div className="form-actions"><button type="button" className="button" disabled={busy} onClick={() => setEditingRequest(null)}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save correction'}</button></div></form></div>}{activeRequest && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setActiveRequest(null)}><section className="modal-card attendance-request-modal" role="dialog" aria-modal="true"><button className="modal-close" aria-label="Close request" onClick={() => setActiveRequest(null)}>×</button><h2>Attendance correction</h2><dl><div><dt>Employee</dt><dd>{activeRequest.employee}</dd></div><div><dt>Date</dt><dd>{activeRequest.date}</dd></div><div><dt>Requested punch</dt><dd>{activeRequest.checkIn || '—'} – {activeRequest.checkOut || '—'}</dd></div><div><dt>Reason</dt><dd>{activeRequest.reason}</dd></div><div><dt>Status</dt><dd>{activeRequest.status}</dd></div></dl></section></div>}</PageContainer>
+    if (missingPunchMode) return (
+      <PageContainer>
+        <PageHeader title="Missing Punch Requests" subtitle="Review employee missing punch requests and apply attendance corrections." />
+        <section className="panel data-panel">
+          <form className="attendance-missing-toolbar" onSubmit={(event) => { event.preventDefault(); setAppliedRequestSearch(requestSearch); setAppliedRequestStatus(requestStatus) }}>
+            <input aria-label="Search employee, date or status" placeholder="Search employee, date or status" value={requestSearch} onChange={(event) => setRequestSearch(event.target.value)} />
+            <select aria-label="Filter request status" value={requestStatus} onChange={(event) => setRequestStatus(event.target.value)}>{['All status', 'Pending', 'Approved', 'Rejected'].map((item) => <option key={item}>{item}</option>)}</select>
+            <button className="button primary" type="submit">Filter</button>
+            <button className="button" type="button" onClick={() => { setRequestSearch(''); setRequestStatus('All status'); setAppliedRequestSearch(''); setAppliedRequestStatus('All status') }}>Reset</button>
+          </form>
+          <div className="table-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Missing Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Applied On</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleRequests.map((item) => {
+                  const missingType = !item.existingCheckIn && !item.existingCheckOut ? 'Both' : !item.existingCheckIn || item.existingCheckIn === '—' ? 'Punch In' : !item.existingCheckOut || item.existingCheckOut === '—' ? 'Punch Out' : 'Both'
+                  const employeeRecord = employeeStore.getById(item.employeeId ?? '')
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.employee}</TableCell>
+                      <TableCell>{item.employeeId ?? '—'}</TableCell>
+                      <TableCell>{employeeRecord?.dept ?? '—'}</TableCell>
+                      <TableCell>{item.dateKey ?? item.date}</TableCell>
+                      <TableCell>{missingType}</TableCell>
+                      <TableCell><StatusDotBadge status={item.status} /></TableCell>
+                      <TableCell>{item.submittedAt ? format(new Date(item.submittedAt), 'yyyy-MM-dd HH:mm') : '—'}</TableCell>
+                      <TableCell><button className="attendance-view-link" onClick={() => setActiveRequest(item)}>View</button></TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+            {!visibleRequests.length && <div className="empty-state"><b>No missing punch requests</b><span>Requests matching these filters will appear here.</span></div>}
+          </div>
+        </section>
+        {activeRequest && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setActiveRequest(null)}><section className="modal-card attendance-request-modal" role="dialog" aria-modal="true" aria-labelledby="missing-request-title"><button className="modal-close" aria-label="Close request" onClick={() => setActiveRequest(null)}>×</button><h2 id="missing-request-title">Missing punch request</h2><dl><div><dt>Employee</dt><dd>{activeRequest.employee} · {activeRequest.employeeId ?? '—'}</dd></div><div><dt>Date</dt><dd>{activeRequest.dateKey ?? activeRequest.date}</dd></div><div><dt>Missing type</dt><dd>{!activeRequest.existingCheckIn && !activeRequest.existingCheckOut ? 'Both' : !activeRequest.existingCheckIn || activeRequest.existingCheckIn === '—' ? 'Punch In' : !activeRequest.existingCheckOut || activeRequest.existingCheckOut === '—' ? 'Punch Out' : 'Both'}</dd></div><div><dt>Existing punch</dt><dd>{activeRequest.existingCheckIn ?? '—'} – {activeRequest.existingCheckOut ?? '—'}</dd></div><div><dt>Requested punch</dt><dd>{activeRequest.checkIn || '—'} – {activeRequest.checkOut || '—'}</dd></div><div><dt>Reason</dt><dd>{activeRequest.reason}</dd></div><div><dt>Status</dt><dd>{activeRequest.status}</dd></div></dl>{activeRequest.status === 'Pending' && <div className="form-actions"><button className="button" disabled={busy} onClick={() => { void decide(activeRequest.id, 'Rejected').then(() => setActiveRequest(null)) }}>Reject</button><button className="button primary" disabled={busy} onClick={() => { void decide(activeRequest.id, 'Approved').then(() => setActiveRequest(null)) }}>Approve &amp; apply</button></div>}</section></div>}
+      </PageContainer>
+    )
+    return (
+      <PageContainer>
+        <PageHeader title="Attendance corrections" subtitle="Review employee requests to correct their time records." actions={<button className="button" onClick={() => navigate('/app/attendance')}>Back to attendance</button>} />
+        <section className="panel data-panel">
+          <div className="panel-head">
+            <div>
+              <h2>Correction requests</h2>
+              <span>{corrections.filter((item) => item.status === 'Pending').length} pending</span>
+            </div>
+          </div>
+          <div className="table-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Existing time</TableHead>
+                  <TableHead>Requested time</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {corrections.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.employee}</TableCell>
+                    <TableCell>{item.date}</TableCell>
+                    <TableCell>{item.existingCheckIn ?? '—'} – {item.existingCheckOut ?? '—'}</TableCell>
+                    <TableCell>{item.checkIn || '—'} – {item.checkOut || '—'}</TableCell>
+                    <TableCell>{item.reason}</TableCell>
+                    <TableCell><StatusDotBadge status={item.status} /></TableCell>
+                    <TableCell>
+                      <ActionDropdown label={`Actions for ${item.employee}'s correction`} actions={item.status === 'Pending' ? [
+                        { label: 'Edit correction', onClick: () => beginEdit(item) },
+                        { label: 'Approve', onClick: () => { void decide(item.id, 'Approved') } },
+                        { label: 'Reject', destructive: true, onClick: () => { void decide(item.id, 'Rejected') } },
+                      ] : [{ label: 'View correction', onClick: () => setActiveRequest(item) }]} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {!corrections.length && <div className="empty-state"><b>No correction requests</b><span>New employee correction requests will appear here.</span></div>}
+          </div>
+        </section>
+        {editingRequest && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setEditingRequest(null)}><form className="modal-card attendance-request-modal" role="dialog" aria-modal="true" aria-labelledby="edit-correction-title" onSubmit={(event) => { void saveEdit(event) }}><button type="button" className="modal-close" aria-label="Close editor" onClick={() => setEditingRequest(null)}>×</button><h2 id="edit-correction-title">Edit attendance correction</h2><p>{editingRequest.employee} · {editingRequest.date}</p><label className="employee-field">Correct check-in<input value={editCheckIn} onChange={(event) => setEditCheckIn(event.target.value)} placeholder="09:00 AM" /></label><label className="employee-field">Correct check-out<input value={editCheckOut} onChange={(event) => setEditCheckOut(event.target.value)} placeholder="05:30 PM" /></label><label className="employee-field">Reason<textarea required minLength={10} maxLength={500} value={editReason} onChange={(event) => setEditReason(event.target.value)} /></label><div className="form-actions"><button type="button" className="button" disabled={busy} onClick={() => setEditingRequest(null)}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save correction'}</button></div></form></div>}
+        {activeRequest && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setActiveRequest(null)}><section className="modal-card attendance-request-modal" role="dialog" aria-modal="true"><button className="modal-close" aria-label="Close request" onClick={() => setActiveRequest(null)}>×</button><h2>Attendance correction</h2><dl><div><dt>Employee</dt><dd>{activeRequest.employee}</dd></div><div><dt>Date</dt><dd>{activeRequest.date}</dd></div><div><dt>Requested punch</dt><dd>{activeRequest.checkIn || '—'} – {activeRequest.checkOut || '—'}</dd></div><div><dt>Reason</dt><dd>{activeRequest.reason}</dd></div><div><dt>Status</dt><dd>{activeRequest.status}</dd></div></dl></section></div>}
+      </PageContainer>
+    )
   }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -195,7 +286,33 @@ export function AttendanceCorrectionPage({ employeeOnly = false, missingPunchMod
     const ownRequests = corrections.filter((item) => item.employeeId === employee?.id)
     return <PageContainer>
       <PageHeader title="Attendance correction" subtitle="Request a correction and track its review status." />
-      <section className="card employee-dashboard-card"><h2>My correction requests</h2><div className="table-scroll"><table className="hr-table"><thead><tr><th>Date</th><th>Requested time</th><th>Reason</th><th>Status</th></tr></thead><tbody>{ownRequests.map((item) => <tr key={item.id}><td>{item.date}</td><td>{item.checkIn || '—'} – {item.checkOut || '—'}</td><td>{item.reason}</td><td>{item.status}{item.decisionAt && <small>{new Date(item.decisionAt).toLocaleDateString()}</small>}</td></tr>)}</tbody></table>{!ownRequests.length && <p className="empty-state">No correction requests yet.</p>}</div></section>{employee ? correctionForm : <section className="card employee-dashboard-card"><p className="empty-state">Link your employee profile before submitting an attendance correction.</p></section>}
+      <section className="card employee-dashboard-card"><h2>My correction requests</h2><div className="table-scroll">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Requested time</TableHead>
+              <TableHead>Reason</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ownRequests.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>{item.date}</TableCell>
+                <TableCell>{item.checkIn || '—'} – {item.checkOut || '—'}</TableCell>
+                <TableCell>{item.reason}</TableCell>
+                <TableCell>
+                  <StatusDotBadge status={item.status} />
+                  {item.decisionAt && <small>{new Date(item.decisionAt).toLocaleDateString()}</small>}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {!ownRequests.length && <p className="empty-state">No correction requests yet.</p>}
+      </div></section>
+      {employee ? correctionForm : <section className="card employee-dashboard-card"><p className="empty-state">Link your employee profile before submitting an attendance correction.</p></section>}
     </PageContainer>
   }
   return <PageContainer><PageHeader title="Attendance correction" subtitle="Submit a check-in or check-out correction for review." />{correctionForm}</PageContainer>

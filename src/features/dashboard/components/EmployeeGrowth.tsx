@@ -34,8 +34,8 @@ export default function EmployeeGrowth() {
             <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="4 5" vertical={false}/>
             <XAxis dataKey="month" tickFormatter={(month: string) => month.slice(0, 3)} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: 12 }} dy={8}/>
             <YAxis domain={[minimum, maximum]} tickFormatter={(value: number) => value.toLocaleString()} axisLine={false} tickLine={false} tick={{ fill: 'var(--chart-label)', fontSize: 12 }}/>
-            <Tooltip content={ChartTooltip} cursor={{ stroke: '#d8e4dc', strokeDasharray: '4 4' }} animationDuration={180}/>
-            <Area type="monotone" dataKey="employees" name="Employees" stroke="var(--chart-present)" strokeWidth={2.5} fill="url(#growthFill)" dot={{ r: 3.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-present)', stroke: '#fffefa', strokeWidth: 2 }}/>
+            <Tooltip content={ChartTooltip} cursor={{ stroke: '#CFEBD7', strokeDasharray: '4 4' }} animationDuration={180}/>
+            <Area type="monotone" dataKey="employees" name="Employees" stroke="var(--chart-present)" strokeWidth={2.5} fill="url(#growthFill)" dot={{ r: 3.5, fill: 'var(--chart-present)', stroke: '#FFFFFF', strokeWidth: 1.5 }} activeDot={{ r: 5.5, fill: 'var(--chart-present)', stroke: '#FFFFFF', strokeWidth: 2 }}/>
           </AreaChart>
         </ResponsiveContainer>
       </div>

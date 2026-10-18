@@ -51,7 +51,7 @@ export default function ProfilePage() {
     setPhoto(photoDraft)
     window.dispatchEvent(new Event('hrm:data-change'))
     setEditing(false)
-    toast.success('Personal details saved to your profile.')
+    toast.success('Profile updated', { description: 'Your personal details have been saved.' })
   }
   const readPhoto = (file?: File) => {
     if (!file) return

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Mail, ShieldCheck } from 'lucide-react'
+import { detectDialCountry, detectDialCountryFromDigits, hasInternationalPrefix, INDIA, stripDialCode, type DialCountry } from '@/features/auth/utils/dial-codes'
+import { CountryDialPicker } from '@/features/auth/components/CountryDialPicker'
 import { Link, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -95,6 +97,24 @@ export function LoginForm() {
       authError: '',
     }
   })
+  const [dialCountry, setDialCountry] = useState<DialCountry>(() => detectDialCountry(form.phone) ?? INDIA)
+  // True when the flag came from what was typed (not the picker), so clearing the field resets it.
+  const dialCountryDetected = useRef(false)
+  // Local part shown in the input; the dial code is shown by the picker label.
+  const localPhone = (value: string, country: DialCountry) =>
+    country === INDIA ? stripIndiaDialCode(value) : stripDialCode(value, country)
+  // India keeps storing the bare local number (normalizePhoneNumber adds +91);
+  // other countries store +<code><number>, which normalizePhoneNumber accepts as-is.
+  const composePhone = (local: string, country: DialCountry) =>
+    country === INDIA || !local ? local : `+${country.dialCode}${local.replace(/^0+/, '')}`
+  const displayedPhone = localPhone(form.phone, dialCountry)
+  const selectDialCountry = (country: DialCountry) => {
+    const local = localPhone(form.phone, dialCountry)
+    dialCountryDetected.current = false
+    setDialCountry(country)
+    setForm((current) => ({ ...current, phone: composePhone(local, country), identifierError: '', authError: '' }))
+    requestAnimationFrame(() => phoneInputRef.current?.focus())
+  }
   const [otpSent, setOtpSent] = useState(persistedState?.otpSent ?? false)
   const [devOtp, setDevOtp] = useState(persistedState?.devOtp ?? '')
   const [otpChannel, setOtpChannel] = useState<OtpChannel>(persistedState?.otpChannel ?? 'email')
@@ -104,6 +124,17 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const otpInputRefs = useRef<Array<HTMLInputElement | null>>([])
+  const phoneInputRef = useRef<HTMLInputElement | null>(null)
+
+  const movePhoneCursorToEnd = () => {
+    const input = phoneInputRef.current
+    if (!input || loginMode !== 'phone') return
+    const selectionIndex = input.value.length
+    requestAnimationFrame(() => {
+      input.focus()
+      input.setSelectionRange(selectionIndex, selectionIndex)
+    })
+  }
 
   const setOtpCode = (value: string) => {
     const sanitized = value.replace(/\D/g, '').slice(0, 4)
@@ -351,33 +382,70 @@ export function LoginForm() {
                 {loginMode === 'email' ? (
                   <Mail size={17} aria-hidden="true" />
                 ) : (
-                  <ShieldCheck size={17} aria-hidden="true" />
+                  <CountryDialPicker value={dialCountry} onChange={selectDialCountry} disabled={otpSent} />
                 )}
-                {loginMode === 'phone' && (
+                {loginMode === 'phone' && !hasInternationalPrefix(displayedPhone) && (
                   <span className="login-country-code" aria-hidden="true">
-                    +91
+                    +{dialCountry.dialCode}
                   </span>
                 )}
                 <input
                   id="login-identifier"
+                  ref={phoneInputRef}
                   type={loginMode === 'email' ? 'email' : 'tel'}
                   inputMode={loginMode === 'phone' ? 'tel' : undefined}
                   autoComplete={loginMode === 'email' ? 'email' : 'tel'}
                   placeholder={
                     loginMode === 'email' ? 'you@company.com or mobile number' : '98765 43210'
                   }
-                  value={loginMode === 'email' ? form.email : stripIndiaDialCode(form.phone)}
+                  value={loginMode === 'email' ? form.email : displayedPhone}
                   onChange={(event) => {
                     const value = event.target.value
                     const nextMode = detectLoginMode(value)
+                    let stored = value
+                    if (nextMode === 'phone') {
+                      if (hasInternationalPrefix(value)) {
+                        // A typed +code / 00code picks the country; keep the raw entry.
+                        const typedCountry = detectDialCountry(value)
+                        if (typedCountry) {
+                          dialCountryDetected.current = true
+                          setDialCountry(typedCountry)
+                        }
+                      } else {
+                        // No + / 00: a number longer than an Indian mobile ("966570490448",
+                        // "447911123456") starts with its country code, so pick that flag.
+                        // A country the user chose in the picker is never overridden.
+                        const typedCountry = dialCountry === INDIA ? detectDialCountryFromDigits(value) : null
+                        const digits = value.replace(/\D/g, '')
+                        if (typedCountry === INDIA) {
+                          stored = digits.slice(INDIA.dialCode.length)
+                        } else if (typedCountry) {
+                          dialCountryDetected.current = true
+                          setDialCountry(typedCountry)
+                          stored = `+${digits}`
+                        } else {
+                          stored = composePhone(value, dialCountry)
+                        }
+                      }
+                    }
+                    if (!value.trim() && dialCountryDetected.current) {
+                      dialCountryDetected.current = false
+                      setDialCountry(INDIA)
+                    }
                     setLoginMode(nextMode)
                     setForm((current) => ({
                       ...current,
-                      [nextMode]: value,
+                      [nextMode]: stored,
                       identifierError: '',
                       authError: '',
                     }))
+                    if (nextMode === 'phone') {
+                      requestAnimationFrame(() => movePhoneCursorToEnd())
+                    }
                   }}
+                  onFocus={movePhoneCursorToEnd}
+                  onClick={movePhoneCursorToEnd}
+                  onKeyUp={movePhoneCursorToEnd}
                   disabled={otpSent}
                   aria-invalid={Boolean(form.identifierError)}
                   aria-describedby={form.identifierError ? 'login-identifier-error' : undefined}
@@ -459,11 +527,18 @@ export function LoginForm() {
                     />
                   ))}
                 </div>
-                <span id="login-otp-hint" className="login-otp-hint">
-                  {loginMode === 'email'
-                    ? 'Enter the 4-digit code from your work email.'
-                    : `Enter the 4-digit code sent by ${otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
-                </span>
+                {form.authError ? (
+                  <span id="login-otp-hint" className="login-otp-error" role="alert">
+                    <ShieldCheck size={14} aria-hidden="true" />
+                    {form.authError}
+                  </span>
+                ) : (
+                  <span id="login-otp-hint" className="login-otp-hint">
+                    {loginMode === 'email'
+                      ? 'Enter the 4-digit code from your work email.'
+                      : `Enter the 4-digit code sent by ${otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
+                  </span>
+                )}
               </div>
             )}
 
@@ -476,7 +551,7 @@ export function LoginForm() {
               </div>
             )}
 
-            {form.authError && (
+            {form.authError && !otpSent && (
               <p className="login-error" role="alert">
                 <ShieldCheck size={16} />
                 {form.authError}

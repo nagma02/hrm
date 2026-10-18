@@ -1,52 +1,72 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
-import DashboardPage from '@/features/dashboard/pages/DashboardPage'
-import EmployeesPage from '@/features/employees/pages/EmployeesPage'
-import EmployeeCreatePage from '@/features/employees/pages/EmployeeCreatePage'
-import EmployeeDetailsPage from '@/features/employees/pages/EmployeeDetailsPage'
-import EmployeeEditPage from '@/features/employees/pages/EmployeeEditPage'
-import ModulePage from '@/features/shared/ModulePage'
-import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import LoginPage from '@/features/auth/pages/LoginPage'
-import { LegalPolicyPage } from '@/features/auth/pages/LegalPolicyPage'
-import { NotFoundPage } from '@/features/system/pages/NotFoundPage'
-import { UnauthorizedPage } from '@/features/system/pages/UnauthorizedPage'
+import { PageSkeleton } from '@/components/ui/skeleton'
 import { GuestRoute } from './guest-route'
 import { ProtectedRoute } from './protected-route'
 import { PermissionRoute } from './permission-route'
-import { CompOffApprovalPage, LeaveApprovalPage, LeaveApplyPage, LeaveDetailsPage, LeavePage } from '@/features/leave'
-import { AttendanceCorrectionPage } from '@/features/attendance/pages/AttendanceCorrectionPage'
-import { AttendanceDetailsPage } from '@/features/attendance/pages/AttendanceDetailsPage'
-import { AttendanceSheetPage, MonthlyAttendanceCalendarPage, UserMonthlyAttendanceReportPage } from '@/features/attendance/pages/AttendanceViewsPage'
-import { PayrollReportsPage } from '@/features/payroll/pages/PayrollReportsPage'
-import { PayrollPage } from '@/features/payroll/pages/PayrollPage'
-import { PaymentsPage } from '@/features/payroll/pages/PaymentsPage'
-import { PayrollDetailPage } from '@/features/payroll/pages/PayrollDetailPage'
-import { EmployeeDeductionsPage, PayrollApprovalsPage, PayrollLoansPage, PayrollSettingsPage } from '@/features/payroll/pages/PayrollNavPages'
-import HolidaysPage from '@/features/hr-content/pages/HolidaysPage'
-import AnnouncementsPage from '@/features/hr-content/pages/AnnouncementsPage'
-import { getPortalLandingPath, normalizeRole } from '@/app/auth/access'
+import { getPortalLandingPath } from '@/app/auth/access'
 import { useAuth } from '@/app/providers/use-auth'
 import EmployeeLayout from '@/employee/layout/EmployeeLayout'
 import { employeeStore } from '@/features/employees/data/employeeStore'
 import { findCurrentEmployee } from '@/features/employees/utils/employee-identity'
 import type { User } from '@/types/auth'
-import EmployeeDashboardPage from '@/employee/pages/DashboardPage'
-import EmployeeAttendancePage from '@/employee/pages/AttendancePage'
-import EmployeeLeavePage from '@/employee/pages/LeavePage'
-import EmployeeLeaveRequestsPage from '@/employee/pages/LeaveRequestsPage'
-import EmployeeShiftsPage from '@/employee/pages/ShiftsPage'
-import EmployeePayrollPage from '@/employee/pages/PayrollPage'
-import EmployeeDocumentsPage from '@/employee/pages/DocumentsPage'
-import EmployeeHolidaysPage from '@/employee/pages/HolidaysPage'
-import EmployeeAnnouncementsPage from '@/employee/pages/AnnouncementsPage'
-import EmployeeProfilePage from '@/employee/pages/ProfilePage'
-import NotificationsPage from '@/features/notifications/pages/NotificationsPage'
-import UserSessionsPage from '@/features/auth/pages/UserSessionsPage'
+
+/** Lazily load a named export so every page ships in its own chunk. */
+function lazyNamed<K extends string, P extends object>(load: () => Promise<Record<K, ComponentType<P>>>, name: K) {
+  return lazy(async () => ({ default: (await load())[name] }))
+}
+
+const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
+const EmployeesPage = lazy(() => import('@/features/employees/pages/EmployeesPage'))
+const EmployeeCreatePage = lazy(() => import('@/features/employees/pages/EmployeeCreatePage'))
+const EmployeeDetailsPage = lazy(() => import('@/features/employees/pages/EmployeeDetailsPage'))
+const EmployeeEditPage = lazy(() => import('@/features/employees/pages/EmployeeEditPage'))
+const ModulePage = lazy(() => import('@/features/shared/ModulePage'))
+const ForgotPasswordPage = lazyNamed(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage')
+const LegalPolicyPage = lazyNamed(() => import('@/features/auth/pages/LegalPolicyPage'), 'LegalPolicyPage')
+const NotFoundPage = lazyNamed(() => import('@/features/system/pages/NotFoundPage'), 'NotFoundPage')
+const UnauthorizedPage = lazyNamed(() => import('@/features/system/pages/UnauthorizedPage'), 'UnauthorizedPage')
+const loadLeave = () => import('@/features/leave')
+const CompOffApprovalPage = lazyNamed(loadLeave, 'CompOffApprovalPage')
+const LeaveApprovalPage = lazyNamed(loadLeave, 'LeaveApprovalPage')
+const LeaveApplyPage = lazyNamed(loadLeave, 'LeaveApplyPage')
+const LeaveDetailsPage = lazyNamed(loadLeave, 'LeaveDetailsPage')
+const LeavePage = lazyNamed(loadLeave, 'LeavePage')
+const AttendanceCorrectionPage = lazyNamed(() => import('@/features/attendance/pages/AttendanceCorrectionPage'), 'AttendanceCorrectionPage')
+const AttendanceDetailsPage = lazyNamed(() => import('@/features/attendance/pages/AttendanceDetailsPage'), 'AttendanceDetailsPage')
+const loadAttendanceViews = () => import('@/features/attendance/pages/AttendanceViewsPage')
+const AttendanceSheetPage = lazyNamed(loadAttendanceViews, 'AttendanceSheetPage')
+const MonthlyAttendanceCalendarPage = lazyNamed(loadAttendanceViews, 'MonthlyAttendanceCalendarPage')
+const UserMonthlyAttendanceReportPage = lazyNamed(loadAttendanceViews, 'UserMonthlyAttendanceReportPage')
+const PayrollReportsPage = lazyNamed(() => import('@/features/payroll/pages/PayrollReportsPage'), 'PayrollReportsPage')
+const PayrollPage = lazyNamed(() => import('@/features/payroll/pages/PayrollPage'), 'PayrollPage')
+const PaymentsPage = lazyNamed(() => import('@/features/payroll/pages/PaymentsPage'), 'PaymentsPage')
+const PayrollDetailPage = lazyNamed(() => import('@/features/payroll/pages/PayrollDetailPage'), 'PayrollDetailPage')
+const loadPayrollNav = () => import('@/features/payroll/pages/PayrollNavPages')
+const EmployeeDeductionsPage = lazyNamed(loadPayrollNav, 'EmployeeDeductionsPage')
+const PayrollApprovalsPage = lazyNamed(loadPayrollNav, 'PayrollApprovalsPage')
+const PayrollLoansPage = lazyNamed(loadPayrollNav, 'PayrollLoansPage')
+const PayrollSettingsPage = lazyNamed(loadPayrollNav, 'PayrollSettingsPage')
+const HolidaysPage = lazy(() => import('@/features/hr-content/pages/HolidaysPage'))
+const AnnouncementsPage = lazy(() => import('@/features/hr-content/pages/AnnouncementsPage'))
+const EmployeeDashboardPage = lazy(() => import('@/employee/pages/DashboardPage'))
+const EmployeeAttendancePage = lazy(() => import('@/employee/pages/AttendancePage'))
+const EmployeeLeavePage = lazy(() => import('@/employee/pages/LeavePage'))
+const EmployeeLeaveRequestsPage = lazy(() => import('@/employee/pages/LeaveRequestsPage'))
+const EmployeeShiftsPage = lazy(() => import('@/employee/pages/ShiftsPage'))
+const EmployeePayrollPage = lazy(() => import('@/employee/pages/PayrollPage'))
+const EmployeeDocumentsPage = lazy(() => import('@/employee/pages/DocumentsPage'))
+const EmployeeHolidaysPage = lazy(() => import('@/employee/pages/HolidaysPage'))
+const EmployeeAnnouncementsPage = lazy(() => import('@/employee/pages/AnnouncementsPage'))
+const EmployeeProfilePage = lazy(() => import('@/employee/pages/ProfilePage'))
+const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage'))
+const UserSessionsPage = lazy(() => import('@/features/auth/pages/UserSessionsPage'))
 
 export function RouterApp() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<PageSkeleton />}>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
@@ -298,6 +318,7 @@ export function RouterApp() {
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
@@ -355,7 +376,7 @@ function EmployeePortalRoutes() {
         <Route path="/leave" element={<EmployeeLeavePage />} />
         <Route path="/leave/requests" element={<EmployeeLeaveRequestsPage />} />
         <Route path="/shifts" element={<EmployeeShiftsPage />} />
-        <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/payments" element={<PaymentsPage scope="employee" />} />
         <Route path="/payroll" element={<EmployeePayrollPage />} />
         <Route path="/documents" element={<EmployeeDocumentsPage />} />
         <Route path="/holidays" element={<EmployeeHolidaysPage />} />

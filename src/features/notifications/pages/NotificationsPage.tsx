@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCheck, Clock3, MailWarning } from 'lucide-react'
+import { CheckCheck, MailWarning } from 'lucide-react'
 import { useAuth } from '@/app/providers/use-auth'
 import { navigateTo } from '@/app/router/navigation'
 import { notificationService } from '@/features/notifications/services/notification.service'
 import type { NotificationRecord } from '@/features/notifications/types/notification.types'
 import PageContainer from '@/features/shared/PageContainer'
 import PageHeader from '@/features/shared/PageHeader'
+import { TableSkeleton } from '@/components/ui/skeleton'
 
 function formatDateTime(value: string) {
   const date = new Date(value)
@@ -102,7 +103,7 @@ export default function NotificationsPage({ portal = 'admin' }: { portal?: 'admi
         </div>
 
         {loading ? (
-          <div className="empty-state"><Clock3 size={16} /> Loading notifications…</div>
+          <TableSkeleton rows={6} columns={4} label="Loading notifications" />
         ) : filteredItems.length === 0 ? (
           <div className="empty-state"><MailWarning size={16} /> No notifications match this view.</div>
         ) : (

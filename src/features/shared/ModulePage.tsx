@@ -22,6 +22,8 @@ import { listAttendanceCorrections, listAttendanceRows } from '@/features/attend
 import { useHRMDataChange } from '@/hooks/useHRMDataChange'
 import { useAuth } from '@/app/providers/use-auth'
 import { changeAccountPassword } from '@/services/auth.service'
+import { ToolbarSelect } from '@/components/tables/ToolbarSelect'
+import { ChartCardSkeleton } from '@/components/ui/skeleton'
 
 const labels: Record<string, string> = {
   attendance: 'Attendance',
@@ -266,7 +268,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
 
   if (module === 'settings')
     return (
-      <main className="module-page">
+      <div className="module-page">
         <div className="page-heading">
           <div>
             <p className="eyebrow">PREFERENCES</p>
@@ -275,7 +277,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           </div>
         </div>
         <SettingsContent />
-      </main>
+      </div>
     )
 
   const description =
@@ -310,7 +312,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
                   : `All ${title.toLowerCase()}`
 
   return (
-    <main className={`module-page module-page--${module}`}>
+    <div className={`module-page module-page--${module}`}>
       <div
         className={`page-heading ${['shifts', 'departments', 'designations'].includes(module) ? `module-heading module-heading--${module}` : ''}`}
       >
@@ -367,9 +369,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           <div className="designation-overview-grid">
             <DesignationOverview rows={rows} />
             <Suspense
-              fallback={
-                <section className="panel chart-loading">Loading designation distribution…</section>
-              }
+              fallback={<ChartCardSkeleton label="Loading designation distribution" />}
             >
               <DesignationDistribution rows={rows} />
             </Suspense>
@@ -384,9 +384,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           <div className="attendance-insights-layout">
             <AttendanceCalendar rows={rows} />
             <Suspense
-              fallback={
-                <section className="panel chart-loading">Loading attendance insights…</section>
-              }
+              fallback={<ChartCardSkeleton label="Loading attendance insights" />}
             >
               <AttendanceInsights rows={rows} />
             </Suspense>
@@ -395,7 +393,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
       )}
       {analyticsModules.has(module) && (
         <Suspense
-          fallback={<section className="panel chart-loading">Loading module insights…</section>}
+          fallback={<ChartCardSkeleton label="Loading module insights" />}
         >
           <ModuleAnalytics module={module as 'attendance' | 'payroll'} />
         </Suspense>
@@ -730,7 +728,7 @@ export default function ModulePage({ module, subroute }: { module: string; subro
           </section>
         </div>
       )}
-    </main>
+    </div>
   )
 }
 
@@ -1049,7 +1047,7 @@ function SettingsContent() {
             <div>
               <span className="eyebrow">WORKSPACE PREFERENCES</span>
               <h2>{tab} settings</h2>
-              <p>Update your {tab.toLowerCase()} preferences for Quixotic HR.</p>
+              <p>Update your {tab.toLowerCase()} preferences for your HRM workspace.</p>
             </div>
           </div>
           <div className="settings-field-list">
@@ -1081,16 +1079,9 @@ function SettingsContent() {
                 ) : tab === 'Appearance' && field === 'Compact mode' ? (
                   <input type="checkbox" aria-label={field} checked={settingsValues[field] === 'true'} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: String(event.target.checked) }))} />
                 ) : tab === 'Appearance' && field === 'Sidebar behavior' ? (
-                  <select value={settingsValues[field] ?? 'Expanded'} aria-label={field} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: event.target.value }))}>
-                    <option>Expanded</option>
-                    <option>Collapsed</option>
-                  </select>
+                  <ToolbarSelect ariaLabel={field} className="toolbar-select--block" value={settingsValues[field] ?? 'Expanded'} onValueChange={(value) => setSettingsValues((current) => ({ ...current, [field]: value }))} options={['Expanded', 'Collapsed'].map((item) => ({ label: String(item), value: String(item) }))} />
                 ) : tab === 'General' && index === 4 ? (
-                  <select value={settingsValues[field] ?? 'Asia/Kolkata'} aria-label={field} onChange={(event) => setSettingsValues((current) => ({ ...current, [field]: event.target.value }))}>
-                    <option>Asia/Kolkata</option>
-                    <option>UTC</option>
-                    <option>America/New_York</option>
-                  </select>
+                  <ToolbarSelect ariaLabel={field} className="toolbar-select--block" value={settingsValues[field] ?? 'Asia/Kolkata'} onValueChange={(value) => setSettingsValues((current) => ({ ...current, [field]: value }))} options={['Asia/Kolkata', 'UTC', 'America/New_York'].map((item) => ({ label: item, value: item }))} />
                 ) : (
                   <input
                     type={field.toLowerCase().includes('email') ? 'email' : /\b(days|date|rate|amount|quota|limit|accrual|multiplier|contribution|deductions|calendar year|day of month)\b/i.test(field) ? 'number' : 'text'}

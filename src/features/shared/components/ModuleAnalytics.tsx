@@ -12,7 +12,7 @@ export default function ModuleAnalytics({ module }: { module: AnalyticsModule })
         <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 4" vertical={false} />
         <XAxis dataKey="day" tickFormatter={(day: string) => day.slice(0, 3)} tick={{ fill: 'var(--chart-label)', fontSize: 12 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fill: 'var(--chart-label)', fontSize: 12 }} axisLine={false} tickLine={false} />
-        <Tooltip contentStyle={{ border: '1px solid #d9d8cc', borderRadius: 9, backgroundColor: '#fffefa', boxShadow: '0 8px 22px rgb(53 55 47 / 10%)', fontSize: 12 }} />
+        <Tooltip contentStyle={{ border: '1px solid #CFEBD7', borderRadius: 9, backgroundColor: '#FFFFFF', boxShadow: '0 8px 22px rgb(27 54 43 / 10%)', fontSize: 12 }} />
         <Line type="monotone" dataKey="present" name="Present" stroke="var(--chart-present)" strokeWidth={2.4} dot={{ r: 3, fill: 'var(--chart-present)' }} activeDot={{ r: 5 }} />
         <Line type="monotone" dataKey="absent" name="Absent" stroke="var(--chart-absent)" strokeWidth={2} dot={{ r: 3, fill: 'var(--chart-absent)' }} activeDot={{ r: 5 }} />
         <Line type="monotone" dataKey="late" name="Late" stroke="var(--chart-late)" strokeWidth={2} dot={{ r: 3, fill: 'var(--chart-late)' }} activeDot={{ r: 5 }} />
@@ -27,7 +27,7 @@ export default function ModuleAnalytics({ module }: { module: AnalyticsModule })
       <defs><linearGradient id="payrollAreaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--chart-present)" stopOpacity={0.2}/><stop offset="100%" stopColor="var(--chart-present)" stopOpacity={0.015}/></linearGradient></defs>
       <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 4" vertical={false}/><XAxis dataKey="month" tick={{ fill: 'var(--chart-label)', fontSize: 12 }} axisLine={false} tickLine={false}/>
       <YAxis tickFormatter={(value: number) => `$${Math.round(value / 1000)}k`} tick={{ fill: 'var(--chart-label)', fontSize: 12 }} axisLine={false} tickLine={false}/>
-      <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Payroll']} contentStyle={{ border: '1px solid #d9d8cc', borderRadius: 9, backgroundColor: '#fffefa', boxShadow: '0 8px 22px rgb(53 55 47 / 10%)', fontSize: 12 }}/>
+      <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Payroll']} contentStyle={{ border: '1px solid #CFEBD7', borderRadius: 9, backgroundColor: '#FFFFFF', boxShadow: '0 8px 22px rgb(27 54 43 / 10%)', fontSize: 12 }}/>
       <Area type="monotone" dataKey="amount" stroke="var(--chart-present)" strokeWidth={2.3} fill="url(#payrollAreaFill)" dot={{ r: 3, fill: 'var(--chart-present)' }} activeDot={{ r: 5 }}/>
     </AreaChart></ResponsiveContainer></div>
   </section>

@@ -45,7 +45,9 @@ const adminPermissionByPath: Record<string, string> = {
   '/app/user-sessions': 'settings.view',
 }
 
-export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void; items?: ReadonlyArray<readonly [string, string, typeof LayoutDashboard]> } = {}) {
+export type SidebarItem = readonly [label: string, href: string, icon: typeof LayoutDashboard]
+
+export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void; items?: ReadonlyArray<SidebarItem> } = {}) {
   const { pathname } = useLocation()
   const { hasPermission, isAdminPortalUser } = useRBAC()
   const links = items ?? (isAdminPortalUser
@@ -83,7 +85,7 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
   useEffect(() => { if (approvalsOpen) setApprovalsExpanded(true) }, [approvalsOpen])
 
   return <div className={`side-nav ${collapsed ? 'is-collapsed' : ''}`}>
-    <div className="brand"><span className="brand-mark">H</span>{!collapsed && <span className="brand-copy">HRM<small>Human Resource Management</small></span>}</div>
+    <div className="brand"><span className="brand-mark brand-mark--logo"><img src="/logo-sidebar.png" alt="Upgrate" /></span>{!collapsed && <span className="brand-copy">HRM<small>Human Resource Management</small></span>}</div>
     <div className="nav-label">WORKSPACE</div>
     <nav aria-label="Main navigation">
       {links.map(([label, href, Icon]) => {
@@ -110,7 +112,7 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
                   <Icon size={18} />
                   {!collapsed && <><span>Attendance</span><ChevronDown size={15} className={`nav-chevron ${attendanceExpanded ? 'is-open' : ''}`} /></>}
                 </button>
-                {!collapsed && <div className={`nav-submenu ${attendanceExpanded ? 'is-open' : ''}`}>
+                {!collapsed && <div className={`nav-submenu ${attendanceExpanded ? 'is-open' : ''}`} inert={!attendanceExpanded} aria-hidden={!attendanceExpanded}>
                   {attendanceChildren.map(([subLabel, subHref]) => (
                     <NavLink key={subHref} to={subHref} end title={subLabel} onClick={onNavigate} className={({ isActive }) => `nav-subitem ${isActive ? 'active' : ''}`}>
                       <span>{subLabel}</span>
@@ -126,7 +128,7 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
                 }}>
                   <Icon size={18} />{!collapsed && <><span>{label}</span><ChevronDown size={15} className={`nav-chevron ${(isPayrollGroup ? payrollExpanded : approvalsExpanded) ? 'is-open' : ''}`} /></>}
                 </button>
-                {!collapsed && <div className={`nav-submenu ${(isPayrollGroup ? payrollExpanded : approvalsExpanded) ? 'is-open' : ''}`}>
+                {!collapsed && <div className={`nav-submenu ${(isPayrollGroup ? payrollExpanded : approvalsExpanded) ? 'is-open' : ''}`} inert={!(isPayrollGroup ? payrollExpanded : approvalsExpanded)} aria-hidden={!(isPayrollGroup ? payrollExpanded : approvalsExpanded)}>
                   {(isPayrollGroup ? payrollChildren : approvalChildren).map(([subLabel, subHref]) => <NavLink key={subHref} to={subHref} end title={subLabel} onClick={onNavigate} className={({ isActive }) => `nav-subitem ${isActive ? 'active' : ''}`}><span>{subLabel}</span></NavLink>)}
                 </div>}
               </div>
@@ -157,7 +159,7 @@ export default function Sidebar({ onNavigate, items }: { onNavigate?: () => void
                 </button>
 
                 {!collapsed && (
-                  <div className={`nav-submenu ${leaveExpanded ? 'is-open' : ''}`}>
+                  <div className={`nav-submenu ${leaveExpanded ? 'is-open' : ''}`} inert={!leaveExpanded} aria-hidden={!leaveExpanded}>
                     {leaveChildren.map(([subLabel, subHref, SubIcon]) => {
                       const visible = subLabel === 'Leave' ? hasPermission('leave.view') : hasPermission('leave.approve')
                       if (!visible) return null

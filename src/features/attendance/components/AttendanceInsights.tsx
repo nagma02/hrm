@@ -59,7 +59,7 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
                     outerRadius="88%"
                     paddingAngle={4}
                     cornerRadius={5}
-                    stroke="#fffefa"
+                    stroke="#FFFFFF"
                     strokeWidth={3}
                   >
                     {data.map((entry) => (
@@ -71,7 +71,7 @@ export default function AttendanceInsights({ rows }: { rows: ModuleRow[] }) {
                       `${Number(value)} absent · ${Number(props.payload.rate).toFixed(1)}%`,
                       'Today',
                     ]}
-                    contentStyle={{ border: '1px solid #d9d8cc', borderRadius: 9, backgroundColor: '#fffefa' }}
+                    contentStyle={{ border: '1px solid #CFEBD7', borderRadius: 9, backgroundColor: '#FFFFFF' }}
                   />
                 </PieChart>
               </ResponsiveContainer>

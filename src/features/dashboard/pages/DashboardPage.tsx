@@ -10,6 +10,7 @@ import PayrollSummary from '@/features/dashboard/components/PayrollSummary'
 import { navigateTo } from '@/app/router/navigation'
 import { Plus, RotateCw, Search } from 'lucide-react'
 import { useAuth } from '@/app/providers/use-auth'
+import { ChartCardSkeleton } from '@/components/ui/skeleton'
 
 const AttendanceOverview = lazy(() => import('@/features/dashboard/components/AttendanceOverview'))
 const EmployeeGrowth = lazy(() => import('@/features/dashboard/components/EmployeeGrowth'))
@@ -39,25 +40,25 @@ export default function DashboardPage() {
       <StatsGrid />
 
       <div className="dashboard-visual-grid">
-        <Suspense fallback={<section className="card chart-loading">Loading attendance chart…</section>}><AttendanceBreakdown /></Suspense>
-        <Suspense fallback={<section className="card chart-loading">Loading monthly trends…</section>}><MonthlyAttendanceTrends /></Suspense>
+        <Suspense fallback={<ChartCardSkeleton label="Loading attendance chart" />}><AttendanceBreakdown /></Suspense>
+        <Suspense fallback={<ChartCardSkeleton label="Loading monthly trends" />}><MonthlyAttendanceTrends /></Suspense>
       </div>
 
       <div className="dashboard-pair dashboard-pair-wide dashboard-secondary-analytics">
         <DepartmentDistribution />
-        <Suspense fallback={<section className="card chart-loading">Loading weekly view…</section>}><AttendanceOverview /></Suspense>
+        <Suspense fallback={<ChartCardSkeleton label="Loading weekly view" />}><AttendanceOverview /></Suspense>
       </div>
 
       <div className="dashboard-pair">
         <LeaveOverview />
-        <Suspense fallback={<section className="card chart-loading">Loading workforce trend…</section>}><EmployeeGrowth /></Suspense>
+        <Suspense fallback={<ChartCardSkeleton label="Loading workforce trend" />}><EmployeeGrowth /></Suspense>
       </div>
 
       <div className="dashboard-pair dashboard-pair-wide">
         <div style={{ display: 'grid', alignContent: 'start', gap: 14 }}>
           <RecentEmployeesTable />
           <RecentActivity />
-          <Suspense fallback={<section className="card chart-loading">Loading goal progress…</section>}><DepartmentGoalGauge /></Suspense>
+          <Suspense fallback={<ChartCardSkeleton label="Loading goal progress" />}><DepartmentGoalGauge /></Suspense>
         </div>
         <div style={{ display: 'grid', alignContent: 'start', gap: 16 }}>
           <UpcomingEvents />

@@ -1,63 +1,78 @@
 import React from 'react'
 import { navigateTo } from '@/app/router/navigation'
 import { useEmployees } from '@/features/employees/hooks/useEmployees'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function RecentEmployeesTable() {
   const recentEmployees = useEmployees()
     .slice()
     .sort((first, second) => Date.parse(second.createdAt ?? second.joinDate) - Date.parse(first.createdAt ?? first.joinDate))
     .slice(0, 5)
+
   return (
-    <div className="card recent-employees-card h-auto min-h-0 p-4 sm:p-5">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="card recent-employees-card h-auto min-h-0 p-4 sm:p-5 rounded-xl border border-border bg-card shadow-xs">
+      <div className="flex justify-between items-center mb-3">
         <div>
-          <div className="badge badge--info">People</div>
-          <h3 className="section-title">Recent Employees</h3>
+          <Badge variant="info" className="mb-1">People</Badge>
+          <h3 className="section-title text-base font-semibold">Recent Employees</h3>
         </div>
-        <div style={{ color: 'var(--color-muted)' }}>Latest hires</div>
+        <div className="text-sm text-muted-foreground">Latest hires</div>
       </div>
 
-      <div className="dashboard-table-scroll w-full overflow-x-auto" style={{ marginTop: 12 }}>
-        <table className="table" style={{ width: '100%', minWidth: 720 }}>
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Employee ID</th>
-              <th>Department</th>
-              <th>Designation</th>
-              <th>Joining Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="dashboard-table-scroll w-full overflow-x-auto">
+        <Table className="table min-w-[720px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead>Employee ID</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead>Joining Date</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {recentEmployees.map((r) => (
-              <tr key={r.id}>
-                <td style={{ padding: '12px 16px' }}>
-                  <button className="recent-employee-link" onClick={() => navigateTo(`/app/employees/${r.id}`)} aria-label={`View ${r.firstName} ${r.lastName}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(17,24,39,0.04)', display: 'grid', placeItems: 'center' }}>
-                      {r.firstName[0]}{r.lastName[0]}
-                    </div>
+              <TableRow key={r.id}>
+                <TableCell>
+                  <button
+                    className="recent-employee-link flex items-center gap-3 text-left w-full cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigateTo(`/app/employees/${r.id}`)}
+                    aria-label={`View ${r.firstName} ${r.lastName}`}
+                  >
+                    <Avatar className="h-9 w-9 rounded-full border border-[#CFEBD7]">
+                      <AvatarFallback className="rounded-full bg-[#E6F4EA] text-[#1B362B] text-xs font-bold">
+                        {r.firstName[0]}{r.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
-                        <div style={{ fontWeight: 700 }}>{r.firstName} {r.lastName}</div>
-                      <div style={{ color: 'var(--color-muted)', fontSize: 13 }}>{r.title}</div>
+                      <div className="font-semibold text-foreground text-sm">{r.firstName} {r.lastName}</div>
+                      <div className="text-xs text-muted-foreground">{r.title}</div>
                     </div>
-                  </div>
                   </button>
-                </td>
-                <td>{r.id}</td>
-                <td>{r.dept}</td>
-                <td>{r.title}</td>
-                <td>{r.joinDate}</td>
-                <td>
-                  <div style={{ padding: '6px 10px', borderRadius: 9999, background: r.status === 'Active' ? 'rgba(42,166,95,0.08)' : 'rgba(250,204,21,0.08)', color: 'var(--color-text)', fontWeight: 700, fontSize: 13 }}>
+                </TableCell>
+                <TableCell className="text-sm">{r.id}</TableCell>
+                <TableCell className="text-sm">{r.dept}</TableCell>
+                <TableCell className="text-sm">{r.title}</TableCell>
+                <TableCell className="text-sm">{r.joinDate}</TableCell>
+                <TableCell>
+                  <Badge variant={r.status === 'Active' ? 'success' : 'warning'}>
                     {r.status}
-                  </div>
-                </td>
-              </tr>
+                  </Badge>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )

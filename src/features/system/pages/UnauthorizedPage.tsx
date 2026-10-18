@@ -1,19 +1,6 @@
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-
-function navigateTo(href: string) {
-  window.history.pushState({}, '', href)
-  window.dispatchEvent(new PopStateEvent('popstate'))
-}
+import { ShieldAlert } from 'lucide-react'
+import { SystemMessage } from './SystemMessage'
 
 export function UnauthorizedPage() {
-  return (
-    <div className="system-screen">
-      <Card>
-        <h1>Unauthorized</h1>
-        <p>You do not have access to this screen yet.</p>
-        <Button onClick={() => navigateTo('/login')}>Back to login</Button>
-      </Card>
-    </div>
-  )
+  return <SystemMessage title="Access restricted" message="Your role doesn't include access to this screen. Ask an HR admin if you need it." icon={<ShieldAlert size={22} />} />
 }

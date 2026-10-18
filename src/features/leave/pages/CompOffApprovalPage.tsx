@@ -28,7 +28,7 @@ export function CompOffApprovalPage() {
   }
 
   return <PageContainer>
-    <main className="comp-off-page">
+    <div className="comp-off-page">
       <h1>CompOff Approval</h1>
       <div className="comp-off-tabs" role="tablist" aria-label="Comp off request status">
         {(['Pending', ...tabs] as CompOffStatus[]).map((status) => <button key={status} role="tab" aria-selected={filter === status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{status}</button>)}
@@ -43,6 +43,6 @@ export function CompOffApprovalPage() {
         </tr>)}</tbody></table>{!requests.length && <div className="empty-state">No {filter.toLowerCase()} comp off requests.</div>}</div>
       </section>
       {selected && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}><section className="comp-off-modal" role="dialog" aria-modal="true" aria-labelledby="comp-off-modal-title"><button type="button" className="modal-close" aria-label="Close request details" onClick={() => setSelected(null)}>×</button><span className="leave-widget-kicker">COMP OFF REQUEST</span><h2 id="comp-off-modal-title">{selected.employeeName}</h2><dl><div><dt>Employee ID</dt><dd>{selected.employeeId}</dd></div><div><dt>Date worked</dt><dd>{selected.date}</dd></div><div><dt>Request type</dt><dd>{selected.type}</dd></div><div><dt>Comp off value</dt><dd>{selected.value}</dd></div><div><dt>Reason</dt><dd>{selected.reason}</dd></div><div><dt>Status</dt><dd>{selected.status}</dd></div></dl>{selected.status === 'Pending' && <div className="comp-off-actions comp-off-modal-actions"><button disabled={Boolean(busyId)} onClick={() => decide(selected, 'Approved')}>Approve</button><button disabled={Boolean(busyId)} onClick={() => decide(selected, 'Rejected')}>Reject</button></div>}</section></div>}
-    </main>
+    </div>
   </PageContainer>
 }
